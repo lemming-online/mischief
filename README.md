@@ -9,6 +9,7 @@ mischief requires python3 and the virtualenv python package.
 $ git clone https://github.com/lemming-online/mischief.git
 $ cd mischief
 $ make venv
+$ source venv/bin/activate
 ```
 
 
