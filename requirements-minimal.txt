@@ -1,1 +1,4 @@
+argon2
 eve
+eve-auth-jwt
+flask-mail
