@@ -1,3 +1,3 @@
 from mischief import app
 
-app.run(debug=True, threaded=True)
+app.run(host='0.0.0.0', port=5050, debug=True, threaded=True)

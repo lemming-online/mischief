@@ -5,7 +5,7 @@ defines the routes that mischief exposes
 from flask import url_for, request
 from flask_jwt import jwt_required
 from marshmallow.fields import Email, String
-from webargs.flaskparser import use_kwargs, use_args
+from webargs.flaskparser import use_args
 
 from mischief import app, mail
 from mischief.auth import safe_generate
