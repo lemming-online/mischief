@@ -4,7 +4,7 @@ defines the data models for mischief.
 
 extends the mongoengine ORM for mongodb.
 """
-from mongoengine import Document, EmailField, StringField, EmbeddedDocument, ReferenceField, BooleanField
+from mongoengine import Document, EmailField, StringField, BooleanField
 
 
 class Role:

@@ -8,7 +8,7 @@ from marshmallow.fields import Email, String
 from webargs.flaskparser import use_args
 
 from mischief import app, mail
-from mischief.auth import safe_generate
+from mischief.auth import random
 from mischief.models import User
 
 
@@ -21,7 +21,7 @@ from mischief.models import User
 })
 def register(args):
     user = User(**args)
-    user.token = safe_generate(ttl=28800)
+    user.token = random(ttl=28800)
     user.save()
     registration_message = \
         """

@@ -14,7 +14,7 @@ from werkzeug.security import safe_str_cmp
 from mischief.models import User
 
 
-def safe_generate(ttl=None):
+def random(ttl=None):
     """generate a random token, with an optional embedded TTL"""
     safe = binascii.hexlify(os.urandom(24))
     if ttl:
