@@ -20,6 +20,11 @@ from mischief.models import User
     'password': String(required=True),
 })
 def register(args):
+    """
+    attempts to create a user
+    :param args: @use_args
+    :return: user as json
+    """
     user = User(**args)
     user.token = random(ttl=28800)
     user.save()
@@ -38,15 +43,24 @@ def register(args):
 
 @app.route('/user/<user_id>/confirm', methods=['POST'])
 def confirm_user(user_id):
+    """
+    confirms that a user received their registration email.
+    :param user_id: user to confirm.
+    :return: user info or error
+    """
     user = User.objects(id=user_id).first()
     if user.confirm(request.form['token']):
         return user.to_json()
     else:
         user.delete()
-        return {'error': 'could not confirm, please try to reregister'}, 401
+        return {'error': {'message': 'could not confirm, please try to reregister'}}, 401
 
 
 @app.route('/user/<user_id>')
 @jwt_required
 def show_user(user_id):
+    """
+    returns information about a user
+    :param user_id: user to retrieve.
+    """
     return User.objects(id=user_id).first().to_json()

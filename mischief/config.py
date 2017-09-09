@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-class DefaultConfig:
+class Config:
     SECRET_KEY = 'change me :)'
     DB_NAME = 'd🐝'
     DB_URI = 'data@☁'
