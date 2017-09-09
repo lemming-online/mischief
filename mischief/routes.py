@@ -2,6 +2,7 @@
 """
 defines the routes that mischief exposes
 """
+from flask import url_for, request
 from flask_jwt import jwt_required
 from marshmallow.fields import Email, String
 from webargs.flaskparser import use_kwargs, use_args
@@ -25,24 +26,24 @@ def register(args):
     registration_message = \
         """
         <h1>welcome to lemming.online!</h1><br>
-        <p>please click <a href={}>here</a> to confirm your registration.</p>
-        """
+        <form action='{}' method='post'>
+        <p>please click below to confirm your account registration.</p>
+        <input type='hidden' value='{}'>
+        <input type='submit' value='confirm'>
+        </form>
+        """.format(url_for('confirm_user', user_id=user.id, _external=True), user.token)
     mail.send(registration_message, user.email)
     return user.to_json()
 
 
 @app.route('/user/<user_id>/confirm', methods=['POST'])
-@use_kwargs({
-    'token': String(required=True),
-})
-def confirm_user(user_id, token):
+def confirm_user(user_id):
     user = User.objects(id=user_id).first()
-    if user.token == token:
-        user.token = None
-        user.enabled = True
+    if user.confirm(request.form['token']):
         return user.to_json()
     else:
-        return {'message': 'error'}
+        user.delete()
+        return {'error': 'could not confirm, please try to reregister'}, 401
 
 
 @app.route('/user/<user_id>')
