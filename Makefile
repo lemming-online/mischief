@@ -17,8 +17,7 @@ clean-venv:
 clean: clean-pyc clean-venv
 
 venv: requirements.txt requirements-dev.txt
-	./venv-update venv= -ppython3 venv install= -rrequirements.txt -rrequirements-dev.txt -rrequirements-links.txt
-
+	./venv-update venv= -ppython3 venv install= -rrequirements.txt -rrequirements-dev.txt
 
 build: venv
 

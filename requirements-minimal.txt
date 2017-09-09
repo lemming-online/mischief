@@ -1,4 +1,5 @@
 argon2
-eve
-eve-auth-jwt
-flask-mail
+flask
+flask-jwt
+mongoengine
+webargs
