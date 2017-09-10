@@ -58,7 +58,7 @@ author = u'Jeremy Craven, Jay Hankins, Ankit Patanaik, Matthew Ess'
 # built documents.
 #
 # The short X.Y version.
-version = u'0.1alpha'
+version = u'0.1'
 # The full version, including alpha/beta/rc tags.
 release = u'0.1alpha'
 

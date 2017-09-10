@@ -4,4 +4,5 @@ flask-jwt
 gunicorn
 mongoengine
 requests
+sphinx
 webargs
