@@ -1,7 +1,7 @@
 {
     "scripts": {
         "dokku": {
-            "postdeploy": "mkdir -p docs-root; venv/bin/sphinx-build -b html docs-build docs-root"
+            "postdeploy": "ls; pwd; /app/venv/bin/sphinx-build -b html docs-build docs-root"
         }
     }
 }
