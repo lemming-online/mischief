@@ -1,7 +1,0 @@
-{
-    "scripts": {
-        "dokku": {
-            "postdeploy": "ls; pwd; /app/venv/bin/sphinx-build -b html docs-build docs-root"
-        }
-    }
-}

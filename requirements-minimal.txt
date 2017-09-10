@@ -1,8 +1,0 @@
-argon2
-flask
-flask-jwt
-gunicorn
-mongoengine
-requests
-sphinx
-webargs
