@@ -2,7 +2,7 @@
 mischief is the main backend component for the [lemming.online](https://github.com/lemming-online) project
 
 ## requirements
-mischief requires python3 and the virtualenv python package.
+mischief requires [pipenv](http://docs.pipenv.org/en/latest/basics.html), which should be installed using [pip](https://pip.pypa.io/en/stable/installing/).
 
 ## installation
 ```
@@ -17,8 +17,7 @@ $ make run
 ```
 
 #### dependency management
-it is highly recommended to use [requirements-tools](https://github.com/yelp/requirements-tools) to manage adding new dependencies to mischief. add the dependency to one of the `minimal` requirements files, pinned if necessary or unpinned for latest, and run `$ upgrade-requirements` to generate a new `requirements.txt` file.
-
+dependencies are managed by [pipenv](http://docs.pipenv.org/en/latest/basics.html#installing-packages-for-your-project), which can be used directly (rather than through the Makefile) to manipulate dependencies.
 
 ## the lemmings
 lemming.online is a project developed for Purdue's CS407 Senior Project class, by seniors jeremy craven, jay hankins, ankit patanaik, and matthew ess.
