@@ -8,7 +8,7 @@
 server {
   listen      [::]:{{ $listen_port }};
   listen      {{ $listen_port }};
-  root        {{ $.DOKKU_ROOT }}/{{ $.APP }}/doc/_build/html
+  root        {{ $.DOKKU_ROOT }}/{{ $.APP }}/doc/_build/html;
   {{ if $.NOSSL_SERVER_NAME }}server_name {{ $.NOSSL_SERVER_NAME }}; {{ end }}
   access_log  /var/log/nginx/{{ $.APP }}-access.log;
   error_log   /var/log/nginx/{{ $.APP }}-error.log;
