@@ -14,9 +14,9 @@ server {
 {{ if (and (eq $listen_port "80") ($.SSL_INUSE)) }}
   return 301 https://$host:{{ $.NGINX_SSL_PORT }}$request_uri;
 {{ else }}
-  location  = / {
-    root   /var/lib/docker/volumes/mischief-docs/_data;
-    index  index.html;
+  location = / {
+    root /var/lib/docker/volumes/mischief-docs/_data;
+    rewrite ^/$ index.html last;
   }
   location    / {
 
