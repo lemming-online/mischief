@@ -5,8 +5,8 @@
 {{ $upstream_port := index $port_map_list 2 }}
 
 server {
-    listen {{ $listen_port }} ssl http2;
-    listen [::]:{{ $listen_port }} ssl http2;
+    listen {{ $listen_port }};
+    listen [::]:{{ $listen_port }};
     server_name {{ $.NOSSL_SERVER_NAME }};
 
     access_log /var/log/nginx/{{ $.APP}}-access.log;
