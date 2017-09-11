@@ -1,0 +1,11 @@
+{
+  "name": "mischief",
+  "description": "backend component of lemming.online",
+  "website": "https://lemming.online",
+  "repository": "https://github.com/lemming-online/mischief",
+  "scripts": {
+    "dokku": {
+      "predeploy": "sphinx-build -b html docs-build docs-root"
+    }
+  }
+}
