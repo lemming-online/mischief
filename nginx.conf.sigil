@@ -21,7 +21,7 @@ server {
 
     keepalive_timeout 70;
 
-    root /var/lib/docker/volumes/mischief-docs/_data;
+    root /var/www/nginx-default;
     index index.html;
 
     location = / {
@@ -29,6 +29,7 @@ server {
     }
 
     location /docs {
+        root /var/lib/docker/volumes/mischief-docs/_data;
         try_files $uri $uri/ $uri.html =404;
     }
 
