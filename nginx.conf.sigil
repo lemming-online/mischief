@@ -28,12 +28,12 @@ server {
         return 301 https://{{ $.NOSSL_SERVER_NAME }}/docs;
     }
 
-    location /docs /_static {
+    location ~ ^/(docs|_static) {
         root /var/lib/docker/volumes/mischief-docs/_data;
         try_files $uri $uri/ $uri.html index.html =404;
     }
 
-    location /api /favicon.ico {
+    location ~ ^/(api|favicon.ico) {
         gzip on;
         gzip_min_length 1100;
         gzip_buffers 4 32k;
