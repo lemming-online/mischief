@@ -7,7 +7,7 @@
 server {
     listen {{ $listen_port }} ssl http2;
     listen [::]:{{ $listen_port }} ssl http2;
-    server_name {{ $.SSL_SERVER_NAME }};
+    server_name {{ $.NOSSL_SERVER_NAME }};
 
     access_log /var/log/nginx/{{ $.APP}}-access.log;
     error_log /var/log/nginx/{{ $.APP}}-error.log;
@@ -25,7 +25,7 @@ server {
     index index.html;
 
     location = / {
-        return 301 https://{{ $.SSL_SERVER_NAME }}/docs;
+        return 301 https://{{ $.NOSSL_SERVER_NAME }}/docs;
     }
 
     location /docs {
