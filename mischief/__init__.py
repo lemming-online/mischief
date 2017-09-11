@@ -19,7 +19,7 @@ from mischief.mail import Mail
 # app setup
 app = Flask('mischief')
 app.secret_key = random()
-app.config.from_object('mischief.config.Config')
+app.config.from_object('mischief.config.Default')
 if os.environ.get('MISCHIEF_CONFIG'):
     app.config.from_envvar('MISCHIEF_CONFIG')
 

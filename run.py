@@ -1,4 +1,6 @@
+import os
+
 from mischief import app
 
-app.config.from_object('mischief.dev.config.Config')
+os.environ['MISCHIEF_CONFIG'] = 'mischief/config.cfg'
 app.run(host='0.0.0.0', port=5050, debug=True, threaded=True)
