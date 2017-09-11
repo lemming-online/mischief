@@ -22,14 +22,13 @@ server {
 
     keepalive_timeout 70;
 
-    root /var/www/nginx-default;
+    root /var/lib/docker/volumes/mischief-docs/_data;
 
     location = / {
         return 301 https://{{ $.NOSSL_SERVER_NAME }}/docs;
     }
 
-    location ~* ^/(docs|_static) {
-        root /var/lib/docker/volumes/mischief-docs/_data;
+    location ~* /(docs|_static) {
         try_files $uri $uri/ $uri.html /docs/index.html =404;
     }
 
