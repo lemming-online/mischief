@@ -8,4 +8,3 @@ class Default:
     MAILGUN_URI = 'mail.✉'
     MAILGUN_API_KEY = 'key-🔑'
     MAILGUN_DOMAIN = 'mail.🔫'
-    SERVER_NAME = 'waiter'
