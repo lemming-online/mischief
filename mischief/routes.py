@@ -64,3 +64,8 @@ def show_user(user_id):
     :param user_id: user to retrieve.
     """
     return User.objects(id=user_id).first().to_json()
+
+
+@app.route('/health')
+def health():
+    return "ヽ(´ᗜ｀)ノ"
