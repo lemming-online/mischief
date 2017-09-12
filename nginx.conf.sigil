@@ -29,7 +29,7 @@ server {
     }
 
     location ~* /(docs|_static) {
-        try_files $uri $uri/ $uri.html index.html =404;
+        try_files $uri $uri/ $uri.html /index.html =404;
     }
 
     location /api {
