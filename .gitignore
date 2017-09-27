@@ -1,5 +1,6 @@
 # mischief
 mischief/config.cfg
+.vscode/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -9,27 +9,24 @@ help room management and ticketing platform
 """
 import os
 
-import mongoengine
 from flask import Flask
-from flask_jwt import JWT
-
-from mischief.auth import identity, authenticate, random
-from mischief.mail import Mail
+from flask_jwt_simple import JWTManager
+from flask_mongoengine import MongoEngine
+from flask_restplus import Api
 
 # app setup
 app = Flask('mischief')
-app.secret_key = random()
 app.config.from_object('mischief.config.Default')
 if os.environ.get('MISCHIEF_CONFIG'):
     app.config.from_envvar('MISCHIEF_CONFIG')
 
-# database setup
-db = mongoengine.connect(app.config['DB_NAME'], host=app.config['DB_URI'])
+# db setup
+db = MongoEngine(app)
 
-# auth setup
-jwt = JWT(app, authentication_handler=authenticate, identity_handler=identity)
+# api setup
+api = Api(app)
 
-# mail setup
-mail = Mail(app)
+# jwt setup
+jwt = JWTManager(app)
 
-from mischief import models, routes  # noqa
+from mischief import routes, resources  # noqa

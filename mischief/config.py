@@ -3,8 +3,6 @@ class Default:
     """
     EXAMPLE
     """
-    DB_NAME = 'd🐝'
-    DB_URI = 'data@☁'
-    MAILGUN_URI = 'mail.✉'
-    MAILGUN_API_KEY = 'key-🔑'
-    MAILGUN_DOMAIN = 'mail.🔫'
+    SECRET_KEY = 'not very secret, huh?'
+    SECRET_SALT = 'tasty tasty salt!'
+    JWT_SECRET_KEY = 'how tokenizing...'
