@@ -22,17 +22,7 @@ server {
 
     keepalive_timeout 70;
 
-    root /var/lib/docker/volumes/mischief-docs/_data;
-
     location / {
-        return 301 https://{{ $.NOSSL_SERVER_NAME }}/docs;
-    }
-
-    location /docs {
-        try_files $uri $uri/ $uri.html /docs/index.html =404;
-    }
-
-    location /api {
         gzip on;
         gzip_min_length 1100;
         gzip_buffers 4 32k;
