@@ -61,6 +61,7 @@ server {
         internal;
     }
 }
+{{ end }}
 
 {{ range $upstream_port := $.PROXY_UPSTREAM_PORTS | split " " }}
 upstream {{ $.APP }}-{{ $upstream_port }} {
@@ -69,5 +70,4 @@ upstream {{ $.APP }}-{{ $upstream_port }} {
 {{ $listener_ip := index $listener_list 0 }}
   server {{ $listener_ip }}:{{ $upstream_port }};{{ end }}
 }
-{{ end }}
 {{ end }}

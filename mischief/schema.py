@@ -7,11 +7,11 @@ from flask_restplus.fields import String, List, Nested
 from mischief import api
 
 
-def use_schema(schema_cls):
+def use_schema(schema_cls, request_only=False, response_only=False):
     def decorated(fn):
-        if schema_cls.request_schema() is not None:
+        if not (schema_cls.request_schema() is None or response_only):
             fn = api.expect(schema_cls.request_schema())(fn)
-        if schema_cls.response_schema() is not None:
+        if not (schema_cls.response_schema() is None or request_only):
             fn = api.marshal_with(schema_cls.response_schema())(fn)
         return fn
     return decorated

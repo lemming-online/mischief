@@ -24,7 +24,14 @@ if os.environ.get('MISCHIEF_CONFIG'):
 db = MongoEngine(app)
 
 # api setup
-api = Api(app)
+authorizations = {
+    'bearerAuth': {
+        'type': 'http',
+        'scheme': 'bearer',
+        'bearerFormat': 'JWT'
+    }
+}
+api = Api(app, authorizations=authorizations, security='token')
 
 # jwt setup
 jwt = JWTManager(app)

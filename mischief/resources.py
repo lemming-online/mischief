@@ -15,6 +15,7 @@ from mischief.schema import use_schema, SessionSchema, UsersSchema, UserSchema
 @api.route('/sessions')
 class Session(Resource):
 
+    @api.doc(security=[])
     @use_schema(SessionSchema)
     def post(self):
         params = request.get_json()
@@ -32,6 +33,7 @@ class Session(Resource):
 @api.route('/users')
 class Users(Resource):
 
+    @api.doc(security=[])
     @use_schema(UserSchema)
     def post(self):
         params = request.get_json()
@@ -59,7 +61,7 @@ class User(Resource):
 
     decorators = [jwt_required]
 
-    @use_schema(UserSchema)
+    @use_schema(UserSchema, response_only=True)
     def get(self, user):
         user = models.User.objects.get(id=user)
         if user is not None:
