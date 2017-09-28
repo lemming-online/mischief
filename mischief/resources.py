@@ -6,19 +6,15 @@ from bcrypt import hashpw, checkpw, gensalt
 from flask import request
 from flask_jwt_simple import create_jwt, jwt_required
 from flask_restplus import abort, Resource
-from flask_restplus.fields import List, Nested, String
+
 
 from mischief import models, api
-
-session_fields = api.model('Session', {
-    'email': String,
-    'password': String
-})
+from mischief.schema import use_schema, SessionSchema, UsersSchema, UserSchema
 
 
-@api.route('/session')
+@api.route('/sessions')
 class Session(Resource):
-    @api.marshal_with(session_fields)
+    @use_schema(SessionSchema)
     def post(self):
         params = request.get_json()
         if params['email'] is None or params['password'] is None:
@@ -26,28 +22,17 @@ class Session(Resource):
         user = models.User.objects.get(email=params['email'])
         if user is None:
             abort(404)
-        if checkpw(params['password'].encode('utf-8'), user.password):
+        if checkpw(params['password'].encode('utf-8'), user.password.encode('utf-8')):
             return {'token': create_jwt(identity=user.email)}
         else:
             abort(401)
-
-user_fields = api.model('User', {
-    'id': String,
-    'email': String,
-    'first_name': String,
-    'last_name': String
-})
-
-users_fields = api.model('Users', {
-    'users': List(Nested(user_fields)),
-})
 
 
 @api.route('/users')
 class Users(Resource):
     decorators = [jwt_required]
 
-    @api.marshal_with(user_fields)
+    @use_schema(UserSchema)
     def post(self):
         params = request.get_json()
         hashed = hashpw(params['password'].encode('utf-8'), gensalt())
@@ -58,7 +43,7 @@ class Users(Resource):
         else:
             abort(404)
 
-    @api.marshal_with(users_fields)
+    @use_schema(UsersSchema)
     def get(self):
         return {'users': models.User.objects.only(
             'id',
@@ -72,7 +57,7 @@ class Users(Resource):
 class User(Resource):
     decorators = [jwt_required]
 
-    @api.marshal_with(user_fields)
+    @use_schema(UserSchema)
     def get(self, user):
         user = models.User.objects.get(id=user)
         if user is not None:

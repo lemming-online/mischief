@@ -6,3 +6,4 @@ class Default:
     SECRET_KEY = 'not very secret, huh?'
     SECRET_SALT = 'tasty tasty salt!'
     JWT_SECRET_KEY = 'how tokenizing...'
+    RESTPLUS_MASK_SWAGGER = False
