@@ -10,6 +10,7 @@ help room management and ticketing platform
 import os
 
 from flask import Flask
+from flask_cors import CORS
 from flask_jwt_simple import JWTManager
 from flask_mongoengine import MongoEngine
 from flask_restplus import Api
@@ -35,5 +36,8 @@ api = Api(app, authorizations=authorizations, security='token')
 
 # jwt setup
 jwt = JWTManager(app)
+
+# CORS setup
+CORS(app)
 
 from mischief import routes, resources  # noqa

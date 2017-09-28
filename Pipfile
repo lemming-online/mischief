@@ -3,9 +3,10 @@ url = "https://pypi.python.org/simple"
 verify_ssl = true
 
 [packages]
-Flask = "*"
-Flask-JWT-Simple = "*"
+flask = "*"
+flask-jwt-simple = "*"
 flask-mongoengine = "*"
 gunicorn = "*"
 bcrypt = "*"
 flask-restplus = "*"
+flask-cors = "*"
