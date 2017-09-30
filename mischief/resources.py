@@ -1,70 +1,29 @@
 # -*- coding: utf-8 -*-
 """
-resource models for mischief's api
+REST resource views
 """
-from bcrypt import hashpw, checkpw, gensalt
-from flask import request
-from flask_jwt_simple import create_jwt, jwt_required
-from flask_restplus import abort, Resource
+from flask.views import MethodView
+
+from mischief.helpers import register_api
+from mischief.models import User
+from mischief.schema import UserSchema
 
 
-from mischief import models, api
-from mischief.schema import use_schema, SessionSchema, UsersSchema, UserSchema
+def resource(endpoint, url, pk='id', pk_type='string'):
+    class Resource:
+        def __init__(self, resource_cls):
+            self.endpoint = endpoint
+            self.url = url
+            self.pk = pk
+            self.pk_type = pk_type
+            register_api(resource_cls, endpoint, url, pk, pk_type)
+    return Resource
 
 
-@api.route('/sessions')
-class Session(Resource):
-
-    @api.doc(security=[])
-    @use_schema(SessionSchema)
-    def post(self):
-        params = request.get_json()
-        if params['email'] is None or params['password'] is None:
-            abort(400)
-        user = models.User.objects.get(email=params['email'])
-        if user is None:
-            abort(404)
-        if checkpw(params['password'].encode('utf-8'), user.password.encode('utf-8')):
-            return {'token': create_jwt(identity=user.email)}
+@resource(endpoint='user_api', url='/users/', pk='user_id')
+class UserResource(MethodView):
+    def get(self, user_id):
+        if user_id is None:
+            return [UserSchema().dump(user) for user in User.objects()]
         else:
-            abort(401)
-
-
-@api.route('/users')
-class Users(Resource):
-
-    @api.doc(security=[])
-    @use_schema(UserSchema)
-    def post(self):
-        params = request.get_json()
-        hashed = hashpw(params['password'].encode('utf-8'), gensalt())
-        params['password'] = hashed
-        user = models.User(**params)
-        if user.save(force_insert=True):
-            return user
-        else:
-            abort(404)
-
-    @jwt_required
-    @use_schema(UsersSchema)
-    def get(self):
-        return {'users': models.User.objects.only(
-            'id',
-            'email',
-            'first_name',
-            'last_name'
-        ).all()}
-
-
-@api.route('/users/<user>')
-class User(Resource):
-
-    decorators = [jwt_required]
-
-    @use_schema(UserSchema, response_only=True)
-    def get(self, user):
-        user = models.User.objects.get(id=user)
-        if user is not None:
-            return user
-        else:
-            abort(404)
+            return UserSchema().dump(User.objects(id=user_id))

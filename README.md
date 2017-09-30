@@ -8,6 +8,11 @@ $ pipsi install pew
 $ pipsi install pipenv
 ```
 
+alternatively:
+```
+$ pip3 install pipenv
+```
+
 ## installation
 ```
 $ git clone https://github.com/lemming-online/mischief.git
