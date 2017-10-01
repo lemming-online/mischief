@@ -2,7 +2,8 @@
 """
 defines the miscellaneous routes that mischief exposes
 """
-from flask import url_for
+import os
+from flask import url_for, send_from_directory
 
 from mischief import app
 
@@ -29,3 +30,10 @@ def site_map():
             url = url_for(rule.endpoint, **(rule.defaults or {}))
             links.append((url, rule.endpoint))
     return links
+
+
+# shamelessly stopen from http://flask.pocoo.org/docs/0.12/patterns/favicon/
+@app.route('/favicon.ico')
+def favicon():
+    return send_from_directory(os.path.join(app.root_path, 'static'),
+                               'favicon.ico', mimetype='image/vnd.microsoft.icon')

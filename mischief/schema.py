@@ -2,6 +2,7 @@
 """
 schema for serializing and deserializing model objects
 """
+from flask import request
 from marshmallow import Schema, post_load
 from marshmallow.fields import String, Email, Nested, Boolean
 from marshmallow.validate import OneOf
@@ -17,7 +18,7 @@ class SectionSchema(Schema):
 
 class CourseSchema(Schema):
     name = String(required=True)
-    sections = Nested(SectionSchema, many=True)
+    sections = Nested(SectionSchema, many=True, default=[])
 
 
 class RoleSchema(Schema):
@@ -25,12 +26,12 @@ class RoleSchema(Schema):
         default=RoleNames.mentee,
         validate=OneOf([r.value for r in RoleNames])
     )
-    course = Nested(CourseSchema, only=('name',))
-    section = Nested(SectionSchema)
+    course = Nested(CourseSchema, only=('name',), required=True)
+    section = Nested(SectionSchema, required=True)
 
 
 class UserSchema(Schema):
-    display_name = String()
+    display_name = String(required=True)
     roles = Nested(RoleSchema, many=True, default=[])
     enabled = Boolean(default=False, load_only=True)
     admin = Boolean(default=False, load_only=True)
@@ -38,11 +39,15 @@ class UserSchema(Schema):
     # TODO: DRY-ify this by making the collection parameterized
     @post_load
     def make_user(self, data):
-        return mongo.db.users.insert_one({
-            **data
-        })
+        if request.method == 'POST':
+            return mongo.db.users.insert_one({
+                **data
+            })
+        else:
+            return mongo.db.users.update_one({**data},
+                                             {**data})
 
 
 class RegisteredUserSchema(UserSchema):
     email = Email(unique=True, required=True)
-    password = String(load_only=True)
+    password = String(load_only=True, required=True)

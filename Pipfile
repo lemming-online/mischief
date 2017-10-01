@@ -11,3 +11,7 @@ bcrypt = "*"
 flask-cors = "*"
 marshmallow = "*"
 flask-pymongo = "*"
+
+[dev-packages]
+pytest = "*"
+pytest-flask = "*"
