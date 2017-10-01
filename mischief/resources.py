@@ -16,12 +16,13 @@ class UserResource(MethodView):
         return mongo.db.users.find_one_or_404({'_id': user_id})
 
     @app.use_schema(RegisteredUserSchema(), load=True)
-    def put(self, user_id):
-        pass
-
-    @app.use_schema(RegisteredUserSchema(), load=True)
-    def patch(self, user_id):
-        pass
+    def put(self, user_id, data):
+        ref = mongo.db.users.find_one_or_404({'_id': user_id})
+        if ref is None:
+            return {'error': {'status_code': 404}}
+        if not data.acknowledged:
+            return {'error': {'status_code': 500}}
+        return ref
 
     def delete(self, user_id):
         deleted = mongo.db.users.delete_one({'_id': user_id})

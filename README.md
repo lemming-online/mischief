@@ -4,6 +4,7 @@ mischief is the main backend component for the [lemming.online](https://github.c
 ## requirements
 mischief requires [pipenv](http://docs.pipenv.org/en/latest/basics.html), which we recommend you install using [pipsi](https://github.com/mitsuhiko/pipsi).
 ```
+$ curl https://raw.githubusercontent.com/mitsuhiko/pipsi/master/get-pipsi.py | python
 $ pipsi install pew
 $ pipsi install pipenv
 ```
