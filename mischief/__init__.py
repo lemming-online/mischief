@@ -9,22 +9,43 @@ help room management and ticketing platform
 """
 import os
 
-from flask import Flask
 from flask_cors import CORS
 from flask_jwt_simple import JWTManager
-from flask_mongoengine import MongoEngine
+from flask_pymongo import PyMongo
+
+from .ratnap import RatNap
 
 # app setup
-app = Flask('mischief')
+app = RatNap('mischief')
 app.config.from_object('mischief.config.Default')
 if os.environ.get('MISCHIEF_CONFIG'):
     app.config.from_envvar('MISCHIEF_CONFIG')
 
 # db setup
-db = MongoEngine(app)
+mongo = PyMongo(app)
 
 # jwt setup
 jwt = JWTManager(app)
 
 # CORS setup
 CORS(app)
+
+
+# set mongo indexes
+@app.before_first_request
+def ensure_indexes():
+    mongo.db.users.create_index('email', unique=True)
+
+
+# set admin user
+@app.before_first_request
+def ensure_admin():
+    mongo.db.users.insert_one({
+        'email': 'team@lemming.online',
+        'password': 'lemming',
+        'display_name': 'Team Lemming',
+        'roles': [],
+        'admin': True
+    })
+
+from mischief import resources, routes  # noqa

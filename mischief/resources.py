@@ -4,26 +4,35 @@ REST resource views
 """
 from flask.views import MethodView
 
-from mischief.helpers import register_api
-from mischief.models import User
-from mischief.schema import UserSchema
+from mischief import app, mongo
+from mischief.schema import RegisteredUserSchema
 
 
-def resource(endpoint, url, pk='id', pk_type='string'):
-    class Resource:
-        def __init__(self, resource_cls):
-            self.endpoint = endpoint
-            self.url = url
-            self.pk = pk
-            self.pk_type = pk_type
-            register_api(resource_cls, endpoint, url, pk, pk_type)
-    return Resource
-
-
-@resource(endpoint='user_api', url='/users/', pk='user_id')
+# noinspection PyMethodMayBeStatic
+@app.resource(endpoint='user_api', url='/users', pk='user_id')
 class UserResource(MethodView):
     def get(self, user_id):
-        if user_id is None:
-            return [UserSchema().dump(user) for user in User.objects()]
+        pass
+
+    def put(self, user_id):
+        pass
+
+    def patch(self, user_id):
+        pass
+
+    def delete(self, user_id):
+        pass
+
+
+@app.resource(endpoint='users_api', url='/users')
+class UsersResource(MethodView):
+    @app.use_schema(RegisteredUserSchema(), load=True)
+    def post(self, data):
+        if data.acknowledged:
+            return mongo.db.users.find_one_or_404({'_id': data.inserted_id})
         else:
-            return UserSchema().dump(User.objects(id=user_id))
+            return {'error': {'status_code': 500}}
+
+    @app.use_schema(RegisteredUserSchema(), many=True)
+    def get(self):
+        return mongo.db.users.find()

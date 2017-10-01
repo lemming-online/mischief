@@ -4,4 +4,4 @@ class Default:
     EXAMPLE
     """
     JWT_SECRET_KEY = 'how tokenizing...'
-    MONGODB_DB = 'lemmingdb_dev'
+    MONGO_DBNAME = 'db_dev'
