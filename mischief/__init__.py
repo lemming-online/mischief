@@ -40,12 +40,14 @@ def ensure_indexes():
 # set admin user
 @app.before_first_request
 def ensure_admin():
-    mongo.db.users.insert_one({
-        'email': 'team@lemming.online',
-        'password': 'lemming',
-        'display_name': 'Team Lemming',
-        'roles': [],
-        'admin': True
-    })
+    mongo.db.users.find_one_and_replace({'email': 'team@lemming.online'},
+                                        {
+                                            'email': 'team@lemming.online',
+                                            'password': 'lemming',
+                                            'display_name': 'Team Lemming',
+                                            'roles': [],
+                                            'admin': True
+                                        },
+                                        upsert=True)
 
 from mischief import resources, routes  # noqa
