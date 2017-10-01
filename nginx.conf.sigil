@@ -20,7 +20,9 @@ server {
 
     add_header Strict-Transport-Security "max-age=15768000; includeSubDomains" always;
 
-    keepalive_timeout 70;
+    sendfile        on;
+    client_max_body_size 20M;
+    keepalive_timeout  0;
 
     location / {
         gzip on;
