@@ -82,3 +82,22 @@ class CoursesResource(MethodView):
     @app.use_schema(CourseSchema(), many=True)
     def get(self):
         return mongo.db.courses.find()
+
+
+class SectionResource(MethodView):
+    def get(self):
+        pass
+
+    def put(self):
+        pass
+
+    def delete(self):
+        pass
+
+
+class SectionsResource(MethodView):
+    def get(self):
+        pass
+
+    def post(self):
+        pass
