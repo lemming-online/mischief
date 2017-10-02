@@ -25,7 +25,7 @@ server {
     keepalive_timeout  0;
 
     location / {
-        try_files static/$uri static/$uri/ @{{ $.APP }};
+        try_files /static/$uri /static/$uri/ @{{ $.APP }};
     }
 
     location @{{ $.APP }} {
