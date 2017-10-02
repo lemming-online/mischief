@@ -2,7 +2,7 @@
 """
 internal flask extension for RESTfulness
 """
-from flask import Flask, Response, jsonify, request
+from flask import Flask, Response, jsonify, request, abort
 
 
 # shameless stolen from https://blog.miguelgrinberg.com/post/customizing-the-flask-response-class
@@ -34,7 +34,7 @@ class RatNap(Flask):
                 methods=['GET', 'POST'],
             )
 
-    def resource(self, endpoint, url, pk=None, pk_type='string'):
+    def resource(self, endpoint, url, pk=None, pk_type='ObjectId'):
         app = self
 
         class ResourceWrapper:
@@ -57,10 +57,9 @@ class RatNap(Flask):
                     print(raw_params)
                     result = schema_cls.load(raw_params, many=many)
                     if result.errors:
-                        # TODO: throw something here
-                        # TODO: use python logging pls
-                        print('error')
-                        pass
+                        print(result.errors)
+                        # TODO: pls god use python logging
+                        abort(400)
                     kwargs = {**kwargs, 'data': result.data}
                 res = self.fn(self, *args, **kwargs)
                 if dump:

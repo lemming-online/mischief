@@ -53,30 +53,4 @@ def ensure_admin():
                                         },
                                         upsert=True)
 
-
-# format all responses
-@app.after_request
-def conform_to_jsend(response):
-    if response.status_code in range(200, 299):
-        data = {
-            'status': 'success',
-            'data': response.data
-        }
-        response.data = data
-    if response.status_code in range(400, 499):
-        data = {
-            'status': 'fail',
-            'data': response.data
-        }
-        response.data = data
-    if response.status_code in range(500, 599):
-        data = {
-            'status': 'error',
-            'message': response.status,
-            'code': response.status_code,
-            'data': response.data
-        }
-        response.data = data
-    return response
-
-from mischief import resources, routes  # noqa
+from mischief import resources, routes, error_handlers  # noqa

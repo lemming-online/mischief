@@ -2,26 +2,51 @@
 """
 schema for serializing and deserializing model objects
 """
+from bson import ObjectId
 from flask import request
-from marshmallow import Schema, post_load
-from marshmallow.fields import String, Email, Nested, Boolean
+from marshmallow import Schema, post_load, ValidationError
+from marshmallow.fields import String, Email, Nested, Boolean, DateTime
 from marshmallow.validate import OneOf
 
 from mischief import mongo
 from mischief.enum import RoleNames
 
 
-class SectionSchema(Schema):
+class MischiefSchema(Schema):
+    _mongo_field_name = NotImplementedError
+
+    _id = String(dump_only=True)
+
+    @post_load
+    def make_mongo(self, data):
+        if data is None:
+            raise ValidationError('No user data provided')
+        if data['_id']:
+            data['_id'] = ObjectId(data['_id'])
+        if request.method == 'POST':
+            return mongo.db[self._mongo_field_name].insert_one({**data})
+        else:
+            return mongo.db[self._mongo_field_name].update_one({**data},
+                                                               {**data})
+
+
+class SectionSchema(MischiefSchema):
+    _mongo_field_name = 'sections'
+
     name = String(required=True)
     location = String()
 
 
-class CourseSchema(Schema):
+class CourseSchema(MischiefSchema):
+    _mongo_field_name = 'courses'
+
     name = String(required=True)
     sections = Nested(SectionSchema, many=True, default=[])
 
 
-class RoleSchema(Schema):
+class RoleSchema(MischiefSchema):
+    _mongo_field_name = 'roles'
+
     title = String(
         default=RoleNames.mentee,
         validate=OneOf([r.value for r in RoleNames])
@@ -30,24 +55,15 @@ class RoleSchema(Schema):
     section = Nested(SectionSchema, required=True)
 
 
-class UserSchema(Schema):
+class UserSchema(MischiefSchema):
     display_name = String(required=True)
     roles = Nested(RoleSchema, many=True, default=[])
     enabled = Boolean(default=False, load_only=True)
     admin = Boolean(default=False, load_only=True)
 
-    # TODO: DRY-ify this by making the collection parameterized
-    @post_load
-    def make_user(self, data):
-        if request.method == 'POST':
-            return mongo.db.users.insert_one({
-                **data
-            })
-        else:
-            return mongo.db.users.update_one({**data},
-                                             {**data})
-
 
 class RegisteredUserSchema(UserSchema):
+    _mongo_field_name = 'sections'
+
     email = Email(unique=True, required=True)
     password = String(load_only=True, required=True)

@@ -2,6 +2,7 @@
 """
 REST resource views
 """
+from bson import ObjectId
 from flask.views import MethodView
 
 from mischief import app, mongo
@@ -37,7 +38,7 @@ class UsersResource(MethodView):
     @app.use_schema(RegisteredUserSchema(), load=True)
     def post(self, data):
         if data.acknowledged:
-            return mongo.db.users.find_one_or_404({'_id': data.inserted_id})
+            return mongo.db.users.find_one_or_404({'_id': ObjectId(data.inserted_id)})
         else:
             return {'error': {'status_code': 500}}
 
@@ -71,8 +72,13 @@ class CourseResource(MethodView):
 
 @app.resource('courses_api', url='/courses')
 class CoursesResource(MethodView):
-    def get(self):
-        pass
+    @app.use_schema(CourseSchema(), load=True)
+    def post(self, data):
+        if data.acknowledged:
+            return mongo.db.courses.find_one_or_404({'_id': ObjectId(data.inserted_id)})
+        else:
+            return {'error': {'status_code': 500}}
 
-    def post(self):
-        pass
+    @app.use_schema(CourseSchema(), many=True)
+    def get(self):
+        return mongo.db.courses.find()
