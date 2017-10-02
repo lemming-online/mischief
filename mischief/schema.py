@@ -21,7 +21,7 @@ class MischiefSchema(Schema):
     def make_mongo(self, data):
         if data is None:
             raise ValidationError('No user data provided')
-        if data['_id']:
+        if data.get('_id'):
             data['_id'] = ObjectId(data['_id'])
         if request.method == 'POST':
             return mongo.db[self._mongo_field_name].insert_one({**data})
