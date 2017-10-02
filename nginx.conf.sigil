@@ -24,7 +24,7 @@ server {
     client_max_body_size 20M;
     keepalive_timeout  0;
 
-    root {{ $.DOKKU_LIB_ROOT }}/data/static
+    root {{ $.DOKKU_LIB_ROOT }}/data/static;
 
     location / {
         try_files $uri $uri/ @{{ $.APP }};
