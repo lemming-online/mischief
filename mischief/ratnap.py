@@ -54,10 +54,9 @@ class RatNap(Flask):
             def __call__(self, *args, **kwargs):
                 if load:
                     raw_params = request.get_json()
-                    print(raw_params)
                     result = schema_cls.load(raw_params, many=many)
                     if result.errors:
-                        print(result.errors)
+                        print('errors', result.errors)
                         # TODO: pls god use python logging
                         abort(400)
                     kwargs = {**kwargs, 'data': result.data}

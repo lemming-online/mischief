@@ -38,7 +38,7 @@ class UsersResource(MethodView):
     @app.use_schema(RegisteredUserSchema(), load=True)
     def post(self, data):
         if data.acknowledged:
-            return mongo.db.users.find_one_or_404({'_id': ObjectId(data.inserted_id)})
+            return mongo.db.users.find_one({'_id': ObjectId(data.inserted_id)})
         else:
             return {'error': {'status_code': 500}}
 
