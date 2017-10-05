@@ -90,8 +90,8 @@ class ActivationView(MischiefView):
         token = jwt.encode(data, user['password'])
         url = url_for('ActivationView:get', token=token, _external=True)
         html = '<a href="{}">click here!</a>'.format(url)
-        print(mg.send(to=data['email'], content=html, subject='activate your lemming account'))
-        return {'success': True}
+        res = mg.send(to=data['email'], content=html, subject='activate your lemming account')
+        return {'success': res.status_code == 200}, res.status_code
 
     def get(self, token):
         payload = jwt.decode(token, verify=False)
@@ -124,8 +124,8 @@ class AuthenticationView(MischiefView):
         token = jwt.encode(data, user['password'])
         url = url_for('AuthenticationView:new_password', token=token, _external=True)
         html = '<a href="{}">click here!</a>'.format(url)
-        print(mg.send(to=data['email'], content=html, subject='reset your lemming password'))
-        return {'success': True}
+        res = mg.send(to=data['email'], content=html, subject='reset your lemming password')
+        return {'success': res.status_code == 200}, res.status_code
 
     def new_password(self, token):
         payload = jwt.decode(token, verify=False)
