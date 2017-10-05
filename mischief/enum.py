@@ -6,6 +6,6 @@ from enum import Enum
 
 
 class RoleNames(Enum):
-    instructor = 'mischief-instructor'
-    mentor = 'mischief-mentor'
-    mentee = 'mischief-mentee'
+    instructor = 'instructor'
+    mentor = 'mentor'
+    mentee = 'mentee'

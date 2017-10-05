@@ -7,50 +7,24 @@ mischief is the primary backend component of the
 help room management and ticketing platform
 'lemming.online'
 """
-import os
+from flask import Flask
 
-from flask import logging
-from flask_cors import CORS
-from flask_jwt_simple import JWTManager
-from flask_pymongo import PyMongo
-
-from .ratnap import RatNap
-
-# app setup
-app = RatNap('mischief')
-app.config.from_object('mischief.config.Default')
-if os.environ.get('MISCHIEF_CONFIG'):
-    app.config.from_envvar('MISCHIEF_CONFIG')
-
-# db setup
-mongo = PyMongo(app)
-
-# jwt setup
-jwt = JWTManager(app)
-
-# CORS setup
-CORS(app)
-
-logging.getLogger('flask_cors').level = logging.DEBUG
+from mischief.util import initialize
 
 
-# set mongo indexes
-@app.before_first_request
-def ensure_indexes():
-    mongo.db.users.create_index('email', unique=True)
+def create_app(config=None):
+    """
+    creates a mischief app instance with an optional
+    config class that will be overridden by shell settings
 
+    :param config: optional config class
+    :return: mischief instance
+    """
+    _app = Flask('mischief')
+    _app.config.from_object('mischief.config.Default')
+    _app.config.from_object(config or {})
+    _app.config.from_envvar('MISCHIEF_CONFIG', silent=True)
 
-# set admin user
-@app.before_first_request
-def ensure_admin():
-    mongo.db.users.find_one_and_replace({'email': 'team@lemming.online'},
-                                        {
-                                            'email': 'team@lemming.online',
-                                            'password': 'lemming',
-                                            'display_name': 'Team Lemming',
-                                            'roles': [],
-                                            'admin': True
-                                        },
-                                        upsert=True)
+    initialize(_app)
 
-from mischief import resources, routes, error_handlers  # noqa
+    return _app

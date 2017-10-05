@@ -4,4 +4,6 @@ class Default:
     EXAMPLE
     """
     JWT_SECRET_KEY = 'how tokenizing...'
-    MONGO_DBNAME = 'db_dev'
+    MONGO_URI = 'mongodb://localhost:27017/db'
+    MAILGUN_KEY = 'top secret'
+    MAILGUN_DOMAIN = 'localhost'

@@ -5,13 +5,20 @@ verify_ssl = true
 [packages]
 flask = "*"
 flask-jwt-simple = "*"
-flask-mongoengine = "*"
 gunicorn = "*"
-bcrypt = "*"
 flask-cors = "*"
+bcrypt = "*"
 marshmallow = "*"
 flask-pymongo = "*"
+flask-classful = "*"
+pylint = "*"
+webargs = "*"
+requests = "*"
+boto3 = "*"
 
 [dev-packages]
 pytest = "*"
 pytest-flask = "*"
+
+[packages.pymongo]
+extras = [ "tls",]

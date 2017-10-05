@@ -2,68 +2,84 @@
 """
 schema for serializing and deserializing model objects
 """
+from bcrypt import hashpw, gensalt
 from bson import ObjectId
-from flask import request
-from marshmallow import Schema, post_load, ValidationError
-from marshmallow.fields import String, Email, Nested, Boolean, DateTime
-from marshmallow.validate import OneOf
+from marshmallow import Schema, ValidationError, missing, post_load
+from marshmallow.fields import Email, String, Nested, Field, DateTime, Boolean, URL
 
-from mischief import mongo
-from mischief.enum import RoleNames
+
+class EmailSchema(Schema):
+    email = Email(required=True, load_only=True)
+
+
+class AuthenticationSchema(Schema):
+    email = Email(required=True, load_only=True)
+    password = String(required=True, load_only=True)
+
+
+class ObjectIdField(Field):
+    """field for mongodb ObjectId"""
+    def _deserialize(self, value, attr, data):
+        try:
+            return ObjectId(value)
+        except:
+            raise ValidationError('invalid ObjectId `%s`' % value)
+
+    def _serialize(self, value, attr, obj):
+        if value is None:
+            return missing
+        return str(value)
 
 
 class MischiefSchema(Schema):
-    _mongo_document_name = NotImplementedError
-
-    _id = String(dump_only=True)
-
-    @post_load
-    def make_mongo(self, data):
-        if data is None:
-            raise ValidationError('No data provided')
-        if data.get('_id'):
-            data['_id'] = ObjectId(data['_id'])
-        if request.method == 'POST':
-            return mongo.db[self._mongo_document_name].insert_one({**data})
-        else:
-            return mongo.db[self._mongo_document_name].update_one({**data},
-                                                               {**data})
-
-
-class SectionSchema(MischiefSchema):
-    _mongo_document_name = 'sections'
-
-    name = String(required=True)
-    location = String()
-
-
-class CourseSchema(MischiefSchema):
-    _mongo_document_name = 'courses'
-
-    name = String(required=True)
-    sections = Nested(SectionSchema, many=True, default=[])
-
-
-class RoleSchema(MischiefSchema):
-    _mongo_document_name = 'roles'
-
-    title = String(
-        default=RoleNames.mentee,
-        validate=OneOf([r.value for r in RoleNames])
-    )
-    course = Nested(CourseSchema, only=('name',), required=True)
-    section = Nested(SectionSchema, required=True)
+    _id = ObjectIdField()
 
 
 class UserSchema(MischiefSchema):
-    display_name = String(required=True)
-    roles = Nested(RoleSchema, many=True, default=[])
-    enabled = Boolean(default=False, load_only=True)
-    admin = Boolean(default=False, load_only=True)
+    email = Email(required=True)
+    first_name = String(required=True)
+    last_name = String()
+    image = URL(dump_only=True)
+    password = String(required=True, load_only=True)
+    is_enabled = Boolean(default=False)
+    instructing = Nested('CourseSchema', only=('name', 'id'), many=True, default=[])
+    mentoring = Nested('SectionSchema', only=('name', 'location', 'id'), many=True, default=[])
+    menteeing = Nested('SectionSchema', only=('name', 'location', 'id'), many=True, default=[])
+
+    @post_load
+    def hash_password(self, data):
+        if data.get('password'):
+            data['password'] = hashpw(data['password'].encode('utf8'), gensalt())
 
 
-class RegisteredUserSchema(UserSchema):
-    _mongo_document_name = 'users'
+class UserImageSchema(Schema):
+    photo = String(required=True, load_only=True)
 
-    email = Email(unique=True, required=True)
-    password = String(load_only=True, required=True)
+
+class SectionSchema(MischiefSchema):
+    name = String(required=True)
+    location = String()
+    mentors = Nested(UserSchema, only=('display_name', 'email', 'id'), many=True)
+    mentees = Nested(UserSchema, only=('display_name', 'email', 'id'), many=True)
+    course = Nested('CourseSchema', only=('name', 'instructor', 'id'))
+    archive = Nested('ArchiveSchema', only=('at', 'id'))
+    wiki = NotImplementedError  # TODO
+
+
+class ArchiveSchema(MischiefSchema):
+    finished_at = DateTime(required=True)
+    tickets = Nested('TicketSchema', many=True)
+
+
+class TicketSchema(MischiefSchema):
+    title = String(required=True)
+    content = String(required=True)
+    poster = Nested(UserSchema, only=('display_name', 'email', 'id'))
+    handled = Boolean(required=True, default=False)
+    handled_by = Nested(UserSchema, only=('display_name', 'email', 'id'))
+
+
+class CourseSchema(MischiefSchema):
+    name = String()
+    instructor = Nested(UserSchema, only=('first_name', 'last_name', 'email', 'id'))
+    sections = Nested(SectionSchema, many=True)
