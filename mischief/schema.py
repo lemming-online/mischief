@@ -40,7 +40,7 @@ class UserSchema(MischiefSchema):
     first_name = String(required=True)
     last_name = String()
     image = URL(dump_only=True)
-    password = String(required=True, load_only=True)
+    password = String(load_only=True)
     is_enabled = Boolean(default=False)
     instructing = Nested('CourseSchema', only=('name', 'id'), many=True, default=[])
     mentoring = Nested('SectionSchema', only=('name', 'location', 'id'), many=True, default=[])

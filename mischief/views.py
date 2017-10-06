@@ -47,7 +47,7 @@ class UsersView(MischiefView):
         return user_schema.dump(mongo.db.users.find_one_or_404({'_id': user_id}))
 
     @use_args_with(UserSchema)
-    def put(self, user_id, data):
+    def put(self, data, user_id):
         u = mongo.db.users.replace_one({'_id': user_id}, data)
         if update_successful(u):
             return user_schema.dump(mongo.db.users.find_one({'_id': user_id}))
@@ -55,7 +55,7 @@ class UsersView(MischiefView):
             abort(500)
 
     @use_args_with(UserSchema)
-    def patch(self, user_id, data):
+    def patch(self, data, user_id):
         u = mongo.db.users.update_one({'_id': user_id},
                                       {'$set': data})
         if update_successful(u):
@@ -70,9 +70,9 @@ class UsersView(MischiefView):
         else:
             abort(500)
 
-    @route('/set_image', methods=['POST'])
+    @route('/<user_id>/set_image', methods=['POST'])
     @use_args_with(UserImageSchema)
-    def set_photo(self, user_id, data):
+    def set_photo(self, data, user_id):
         res = boto3.resource('s3').Bucket('lemming-user-photos')\
             .put_object(Key=user_id, Body=data['picture'])
         if res['ETag'] is not None:
@@ -88,13 +88,14 @@ class ActivationView(MischiefView):
     def post(self, data):
         user = mongo.db.users.find_one_or_404({'email': data['email']})
         token = jwt.encode(data, user['password'])
-        url = url_for('ActivationView:get', token=token, _external=True)
+        url = url_for('ActivationView:get', token=str(token, 'utf8'), _external=True)
         html = '<a href="{}">click here!</a>'.format(url)
         res = mg.send(to=data['email'], content=html, subject='activate your lemming account')
         return {'success': res.status_code == 200}, res.status_code
 
+    @route('/<string:token>')
     def get(self, token):
-        payload = jwt.decode(token, verify=False)
+        payload = jwt.decode(token.encode('utf8'), verify=False)
         user = mongo.db.users.find_one_or_404({'email': payload['email']})
         if not jwt.decode(token, user['password']):
             abort(400)
@@ -122,11 +123,12 @@ class AuthenticationView(MischiefView):
     def reset(self, data):
         user = mongo.db.users.find_one_or_404({'email': data['email']})
         token = jwt.encode(data, user['password'])
-        url = url_for('AuthenticationView:new_password', token=token, _external=True)
+        url = url_for('AuthenticationView:new_password', token=str(token, 'utf8'), _external=True)
         html = '<a href="{}">click here!</a>'.format(url)
         res = mg.send(to=data['email'], content=html, subject='reset your lemming password')
         return {'success': res.status_code == 200}, res.status_code
 
+    @route('/<string:token>')
     def new_password(self, token):
         payload = jwt.decode(token, verify=False)
         user = mongo.db.users.find_one_or_404({'email': payload['email']})

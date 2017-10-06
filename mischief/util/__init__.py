@@ -11,7 +11,7 @@ from bson import ObjectId
 from flask import Response, jsonify
 from flask_cors import CORS
 from flask_jwt_simple import JWTManager
-from flask_pymongo import PyMongo
+from flask_pymongo import PyMongo, BSONObjectIdConverter
 
 from .mailgunner import MailGunner
 
@@ -44,6 +44,7 @@ def initialize(app):
     from .error_handlers import init_error_handlers
 
     app.url_map.strict_slashes = False
+    app.url_map.converters['default'] = BSONObjectIdConverter
     jwt.init_app(app)
     cors.init_app(app)
     mg.init_app(app)
