@@ -71,7 +71,7 @@ class UsersView(MischiefView):
             abort(500)
 
     @route('/set_image', methods=['POST'])
-    @use_args_with(UserImageSchema, locations=('files', 'form'))
+    @use_args_with(UserImageSchema)
     def set_photo(self, user_id, data):
         res = boto3.resource('s3').Bucket('lemming-user-photos')\
             .put_object(Key=user_id, Body=data['picture'])
