@@ -72,7 +72,7 @@ class UsersView(MischiefView):
 
     @route('/set_image', methods=['POST'])
     @use_args_with(UserImageSchema, locations=('files', 'form'))
-    def set_image(self, user_id, data):
+    def set_photo(self, user_id, data):
         res = boto3.resource('s3').Bucket('lemming-user-photos')\
             .put_object(Key=user_id, Body=data['picture'])
         if res['ETag'] is not None:
