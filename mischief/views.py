@@ -71,11 +71,22 @@ class UsersView(MischiefView):
             abort(500)
 
     @route('/<user_id>/set_image', methods=['POST'])
-    @use_args_with(UserImageSchema)
+    @use_args_with(UserImageSchema, locations=('files', 'form'))
     def set_photo(self, data, user_id):
-        res = boto3.resource('s3').Bucket('lemming-user-photos')\
-            .put_object(Key=user_id, Body=data['picture'])
-        if res['ETag'] is not None:
+        user = mongo.db.users.find_one_or_404({'_id': user_id})
+
+        bucket = boto3.resource('s3').Bucket('lemming-user-photos')
+        response = bucket.put_object(Key=str(user_id), Body=data['photo'], ContentType=data['photo'].content_type)
+        if response.e_tag is not None:
+            url = boto3.client('s3').generate_presigned_url(
+                ClientMethod='get_object',
+                Params={
+                    'Bucket': 'lemming-user-photos',
+                    'Key': str(user_id)
+                }
+            )
+            mongo.db.users.update_one({'_id': user_id},
+                                      {'$set': {'photo': url}})
             return {'success': True}
         else:
             abort(500)

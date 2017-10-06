@@ -5,7 +5,7 @@ schema for serializing and deserializing model objects
 from bcrypt import hashpw, gensalt
 from bson import ObjectId
 from marshmallow import Schema, ValidationError, missing, post_load
-from marshmallow.fields import Email, String, Nested, Field, DateTime, Boolean, URL
+from marshmallow.fields import Email, String, Nested, Field, DateTime, Boolean, URL, Raw
 
 
 class EmailSchema(Schema):
@@ -39,7 +39,7 @@ class UserSchema(MischiefSchema):
     email = Email(required=True)
     first_name = String(required=True)
     last_name = String()
-    image = URL(dump_only=True)
+    photo = URL(dump_only=True)
     password = String(load_only=True)
     is_enabled = Boolean(default=False)
     instructing = Nested('CourseSchema', only=('name', 'id'), many=True, default=[])
@@ -53,7 +53,7 @@ class UserSchema(MischiefSchema):
 
 
 class UserImageSchema(Schema):
-    photo = String(required=True, load_only=True)
+    photo = Raw(required=True, load_only=True)
 
 
 class SectionSchema(MischiefSchema):
