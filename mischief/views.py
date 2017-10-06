@@ -9,8 +9,9 @@ from flask import abort, url_for
 from flask_classful import FlaskView, route
 from flask_jwt_simple import create_jwt
 
+from mischief.mongo import user_by_id, course_by_id, section_by_id
 from mischief.schema import UserSchema, AuthenticationSchema, EmailSchema,\
-    CourseSchema, UserImageSchema
+    CourseSchema, UserImageSchema, SectionSchema
 from mischief.util import mongo, mg
 from mischief.util.decorators import use_args_with
 
@@ -25,6 +26,8 @@ user_schema = UserSchema()
 users_schema = UserSchema(many=True)
 course_schema = CourseSchema()
 courses_schema = CourseSchema(many=True)
+section_schema = SectionSchema()
+sections_schema = SectionSchema(many=True)
 
 
 class MischiefView(FlaskView):
@@ -36,7 +39,7 @@ class UsersView(MischiefView):
     def post(self, data):
         insert = mongo.db.users.insert_one(data)
         if insert.acknowledged:
-            return user_schema.dump(mongo.db.users.find_one({'_id': insert.inserted_id}))
+            return user_schema.dump(user_by_id(insert.inserted_id))
         else:
             abort(500)
 
@@ -44,13 +47,13 @@ class UsersView(MischiefView):
         return users_schema.dump(mongo.db.users.find())
 
     def get(self, user_id):
-        return user_schema.dump(mongo.db.users.find_one_or_404({'_id': user_id}))
+        return user_schema.dump(user_by_id(user_id, error=True))
 
     @use_args_with(UserSchema)
     def put(self, data, user_id):
         u = mongo.db.users.replace_one({'_id': user_id}, data)
         if update_successful(u):
-            return user_schema.dump(mongo.db.users.find_one({'_id': user_id}))
+            return user_schema.dump(user_by_id(user_id))
         else:
             abort(500)
 
@@ -59,7 +62,7 @@ class UsersView(MischiefView):
         u = mongo.db.users.update_one({'_id': user_id},
                                       {'$set': data})
         if update_successful(u):
-            return user_schema.dump(mongo.db.users.find_one({'_id': user_id}))
+            return user_schema.dump(user_by_id(user_id))
         else:
             abort(500)
 
@@ -70,22 +73,22 @@ class UsersView(MischiefView):
         else:
             abort(500)
 
-    @route('/<user_id>/set_photo', methods=['POST'])
+    @route('/<user_id>/set_image', methods=['POST'])
     @use_args_with(UserImageSchema, locations=('files',))
-    def set_photo(self, data, user_id):
-        mongo.db.users.find_one_or_404({'_id': user_id})
-        bucket = boto3.resource('s3').Bucket('lemming-user-photos')
-        response = bucket.put_object(Key=str(user_id), Body=data['photo'],\
-            ContentType=data['photo'].content_type)
+    def set_image(self, data, user_id):
+        user_by_id(user_id, error=True)
+        bucket = boto3.resource('s3').Bucket('lemming-user-images')
+        response = bucket.put_object(Key=str(user_id), Body=data['image'],\
+            ContentType=data['image'].content_type)
         if response.e_tag is not None:
             url = boto3.client('s3').generate_presigned_url(
                 ClientMethod='get_object',
                 Params={
-                    'Bucket': 'lemming-user-photos',
+                    'Bucket': 'lemming-user-images',
                     'Key': str(user_id)
                 })
             mongo.db.users.update_one({'_id': user_id},
-                                      {'$set': {'photo': url}})
+                                      {'$set': {'image': url}})
             return {'success': True}
         else:
             abort(500)
@@ -150,35 +153,79 @@ class AuthenticationView(MischiefView):
 
 class CoursesView(MischiefView):
     """course API endpoints"""
-    def post(self):
-        pass
+    @use_args_with(CourseSchema)
+    def post(self, data):
+        insert = mongo.db.courses.insert_one(data)
+        if insert.acknowledged:
+            return course_schema.dump(course_by_id(insert.inserted_id))
+        else:
+            abort(500)
 
     def index(self):
-        pass
+        return courses_schema.dump(mongo.db.courses.find())
 
-    def get(self):
-        pass
+    def get(self, course_id):
+        return course_schema.dump(course_by_id(course_id))
 
-    def put(self):
-        pass
+    @use_args_with(CourseSchema)
+    def put(self, data, course_id):
+        u = mongo.db.courses.replace_one({'_id': course_id}, data)
+        if update_successful(u):
+            return course_schema.dump(course_by_id(course_id))
+        else:
+            abort(500)
 
-    def delete(self):
-        pass
+    @use_args_with(CourseSchema)
+    def patch(self, data, course_id):
+        u = mongo.db.courses.update_one({'_id': course_id},
+                                        {'$set': data})
+        if update_successful(u):
+            return course_schema.dump(course_by_id(course_id))
+        else:
+            abort(500)
+
+    def delete(self, course_id):
+        d = mongo.db.courses.delete_one({'_id': course_id})
+        if delete_successful(d):
+            return {'success': True}
+        else:
+            abort(500)
 
 
-class SectionView(MischiefView):
+class SectionsView(MischiefView):
     """section api endpoints"""
-    def post(self):
-        pass
+    @use_args_with(SectionSchema)
+    def post(self, data):
+        insert = mongo.db.sections.insert_one(data)
+        if insert.acknowledged:
+            return section_schema.dump(section_by_id(insert.inserted_id))
+        else:
+            abort(500)
 
     def index(self):
-        pass
+        return sections_schema.dump(mongo.db.sections.find())
 
-    def get(self):
-        pass
+    def get(self, section_id):
+        return section_schema.dump(section_by_id(section_id, error=True))
 
-    def put(self):
-        pass
+    def put(self, data, section_id):
+        u = mongo.db.sections.replace_one({'_id': section_id}, data)
+        if update_successful(u):
+            return section_schema.dump(section_by_id(section_id))
+        else:
+            abort(500)
 
-    def delete(self):
-        pass
+    def patch(self, data, section_id):
+        u = mongo.db.sections.update_one({'_id': section_id},
+                                         {'$set': data})
+        if update_successful(u):
+            return section_schema.dump(section_by_id(section_id))
+        else:
+            abort(500)
+
+    def delete(self, section_id):
+        d = mongo.db.sections.delete_one({'_id': section_id})
+        if delete_successful(d):
+            return {'success': True}
+        else:
+            abort(500)
