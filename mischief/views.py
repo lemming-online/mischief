@@ -89,7 +89,7 @@ class UsersView(MischiefView):
                 })
             mongo.db.users.update_one({'_id': user_id},
                                       {'$set': {'image': url}})
-            return {'success': True}
+            return {'image': url}
         else:
             abort(500)
 
