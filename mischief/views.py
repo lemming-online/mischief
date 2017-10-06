@@ -70,7 +70,7 @@ class UsersView(MischiefView):
         else:
             abort(500)
 
-    @route('/<user_id>/set_image', methods=['POST'])
+    @route('/<user_id>/set_photo', methods=['POST'])
     @use_args_with(UserImageSchema, locations=('files', 'form'))
     def set_photo(self, data, user_id):
         user = mongo.db.users.find_one_or_404({'_id': user_id})
