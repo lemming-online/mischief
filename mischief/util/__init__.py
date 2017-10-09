@@ -40,8 +40,7 @@ def initialize(app):
     handle app extension registration and extra setup
     :param app: app to set up with
     """
-    from mischief.views import UsersView, ActivationView, AuthenticationView,\
-        CoursesView, SectionsView
+    from mischief.views import UsersView, ActivationView, AuthenticationView, CoursesView, SectionsView
     from .error_handlers import init_error_handlers
 
     app.url_map.strict_slashes = False
@@ -50,6 +49,10 @@ def initialize(app):
     cors.init_app(app)
     mg.init_app(app)
     mongo.init_app(app)
+
+    @app.before_first_request
+    def ensure_indexes():
+        mongo.db.users.create_index('email', unique=True)
 
     # V I E W S
     UsersView.register(app)

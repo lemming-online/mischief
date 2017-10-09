@@ -3,6 +3,7 @@
 error code handlers
 """
 from flask import jsonify
+from pymongo.errors import DuplicateKeyError
 
 def init_error_handlers(app):
 
@@ -24,6 +25,9 @@ def init_error_handlers(app):
     def server_error(error):
         return http_error(error)
 
+    @app.errorhandler(DuplicateKeyError)
+    def document_exists_error(error):
+        return generic_error('Document already exists.', 409)
 
     @app.errorhandler(422)
     def handle_unprocessable_entity(err):

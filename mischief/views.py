@@ -5,13 +5,13 @@ REST resource views
 import boto3
 import jwt
 from bcrypt import checkpw
+from bson import ObjectId
 from flask import abort, url_for
 from flask_classful import FlaskView, route
 from flask_jwt_simple import create_jwt
 
-from mischief.mongo import user_by_id, course_by_id, section_by_id
-from mischief.schema import UserSchema, AuthenticationSchema, EmailSchema,\
-    CourseSchema, UserImageSchema, SectionSchema
+from mischief.mongo import user_by_id, course_by_id, section_by_id, make_instructor, add_section, update_user, delete_user, update_course, delete_course
+from mischief.schema import UserSchema, AuthenticationSchema, EmailSchema, CourseSchema, UserImageSchema, SectionSchema
 from mischief.util import mongo, mg
 from mischief.util.decorators import use_args_with
 
@@ -35,6 +35,7 @@ class MischiefView(FlaskView):
 
 class UsersView(MischiefView):
     """user API endpoints"""
+
     @use_args_with(UserSchema)
     def post(self, data):
         insert = mongo.db.users.insert_one(data)
@@ -53,7 +54,8 @@ class UsersView(MischiefView):
     def put(self, data, user_id):
         u = mongo.db.users.replace_one({'_id': user_id}, data)
         if update_successful(u):
-            return user_schema.dump(user_by_id(user_id))
+            user = update_user(user_id)
+            return user_schema.dump(user)
         else:
             abort(500)
 
@@ -62,12 +64,13 @@ class UsersView(MischiefView):
         u = mongo.db.users.update_one({'_id': user_id},
                                       {'$set': data})
         if update_successful(u):
-            return user_schema.dump(user_by_id(user_id))
+            user = update_user(user_id)
+            return user_schema.dump(user)
         else:
             abort(500)
 
     def delete(self, user_id):
-        d = mongo.db.users.delete_one({'_id': user_id})
+        d = delete_user(user_id)
         if delete_successful(d):
             return {'success': True}
         else:
@@ -77,6 +80,7 @@ class UsersView(MischiefView):
     @use_args_with(UserImageSchema, locations=('files',))
     def set_image(self, data, user_id):
         user_by_id(user_id, error=True)
+        # TODO: refactor this into an s3 module
         bucket = boto3.resource('s3').Bucket('lemming-user-images')
         response = bucket.put_object(Key=str(user_id), Body=data['image'],\
             ContentType=data['image'].content_type)
@@ -92,7 +96,6 @@ class UsersView(MischiefView):
             return {'image': url}
         else:
             abort(500)
-
 
 
 class ActivationView(MischiefView):
@@ -157,6 +160,10 @@ class CoursesView(MischiefView):
     def post(self, data):
         insert = mongo.db.courses.insert_one(data)
         if insert.acknowledged:
+            u = make_instructor(data['instructor'], for_id=insert.inserted_id)
+            if not update_successful(u):
+                print('error making course consistent')
+                # TODO: use python logging
             return course_schema.dump(course_by_id(insert.inserted_id))
         else:
             abort(500)
@@ -171,7 +178,8 @@ class CoursesView(MischiefView):
     def put(self, data, course_id):
         u = mongo.db.courses.replace_one({'_id': course_id}, data)
         if update_successful(u):
-            return course_schema.dump(course_by_id(course_id))
+            course = update_course(course_id)
+            return course_schema.dump(course)
         else:
             abort(500)
 
@@ -180,52 +188,60 @@ class CoursesView(MischiefView):
         u = mongo.db.courses.update_one({'_id': course_id},
                                         {'$set': data})
         if update_successful(u):
-            return course_schema.dump(course_by_id(course_id))
+            course = update_course(course_id)
+            return course_schema.dump(course)
         else:
             abort(500)
 
     def delete(self, course_id):
-        d = mongo.db.courses.delete_one({'_id': course_id})
+        d = delete_course(course_id)
         if delete_successful(d):
             return {'success': True}
         else:
             abort(500)
 
+    def sections(self, course_id):
+        return sections_schema.dump(
+            mongo.db.courses.find_one_or_404({'_id': course_id},
+                                             projection=['sections']))
+
+    @route('/<course_id>/sections', methods=['POST'])
+    @use_args_with(SectionSchema)
+    def create_section(self, data, course_id):
+        data['_id'] = ObjectId()
+        u = add_section(data, to_id=course_id)
+        if update_successful(u):
+            return section_schema.dump(mongo.db.courses.find_one({'sections._id': data['_id']}))
+        else:
+            abort(500)
 
 class SectionsView(MischiefView):
-    """section api endpoints"""
-    @use_args_with(SectionSchema)
-    def post(self, data):
-        insert = mongo.db.sections.insert_one(data)
-        if insert.acknowledged:
-            return section_schema.dump(section_by_id(insert.inserted_id))
-        else:
-            abort(500)
-
-    def index(self):
-        return sections_schema.dump(mongo.db.sections.find())
+    """section API endpoints"""
 
     def get(self, section_id):
-        return section_schema.dump(section_by_id(section_id, error=True))
+        return section_schema.dump(section_by_id(section_id))
 
     def put(self, data, section_id):
-        u = mongo.db.sections.replace_one({'_id': section_id}, data)
-        if update_successful(u):
-            return section_schema.dump(section_by_id(section_id))
-        else:
-            abort(500)
+        pass
 
     def patch(self, data, section_id):
-        u = mongo.db.sections.update_one({'_id': section_id},
-                                         {'$set': data})
-        if update_successful(u):
-            return section_schema.dump(section_by_id(section_id))
-        else:
-            abort(500)
+        pass
 
-    def delete(self, section_id):
-        d = mongo.db.sections.delete_one({'_id': section_id})
-        if delete_successful(d):
-            return {'success': True}
-        else:
-            abort(500)
+    def delete(self, data, section_id):
+        pass
+
+    @route('/<section_id>/mentor/<user_id>', methods=['POST'])
+    def add_mentor(self, section_id, user_id):
+        pass
+
+    @route('/<section_id>/mentee/<user_id>', methods=['POST'])
+    def add_mentee(self, section_id, user_id):
+        pass
+
+    @route('/<section_id>/mentor/<user_id>', methods=['DELETE'])
+    def remove_mentor(self, section_id, user_id):
+        pass
+
+    @route('/<section_id>/mentee/<user_id>', methods=['DELETE'])
+    def remove_mentee(self, section_id, user_id):
+        pass
