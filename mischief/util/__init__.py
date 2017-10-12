@@ -40,7 +40,7 @@ def initialize(app):
     handle app extension registration and extra setup
     :param app: app to set up with
     """
-    from mischief.views import UsersView, ActivationView, AuthenticationView, CoursesView, SectionsView
+    from mischief.views import UsersView, ActivationView, AuthenticationView, SectionsView
     from .error_handlers import init_error_handlers
 
     app.url_map.strict_slashes = False
@@ -58,7 +58,6 @@ def initialize(app):
     UsersView.register(app)
     ActivationView.register(app)
     AuthenticationView.register(app)
-    CoursesView.register(app)
     SectionsView.register(app)
 
     init_error_handlers(app)
