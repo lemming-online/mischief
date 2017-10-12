@@ -4,20 +4,20 @@ schema for serializing and deserializing model objects
 """
 from bcrypt import hashpw, gensalt
 from bson import ObjectId
-from flask import abort
 from marshmallow import Schema, ValidationError, missing, post_load
-from marshmallow.fields import Email, String, Nested, Field, DateTime, Boolean, URL, Raw, List
+from marshmallow.fields import Email, String, Nested, Field, Boolean, URL, Raw
 
-from mischief.mongo import user_by_id, course_by_id, embed_user
 
 # deserializing only
 class EmailSchema(Schema):
     email = Email(required=True, load_only=True)
 
+
 # deserializing only
 class AuthenticationSchema(Schema):
     email = Email(required=True, load_only=True)
     password = String(required=True, load_only=True)
+
 
 # deserializing only
 class UserImageSchema(Schema):
@@ -48,7 +48,10 @@ class UserSchema(MischiefSchema):
     last_name = String(required=True)
     password = String(load_only=True)
     is_enabled = Boolean(default=False)
-    courses = Nested('EmbeddedCourseSchema', many=True)
+    mentoring = Nested('SectionSchema',
+                       only=('name', 'location', 'description', 'website'), many=True)
+    menteeing = Nested('SectionSchema',
+                       only=('name', 'location', 'description', 'website'), many=True)
     image = URL()
 
     def clean_password(self, data):
@@ -66,38 +69,6 @@ class SectionSchema(MischiefSchema):
     name = String(required=True)
     location = String()
     description = String()
+    website = URL()
     mentors = Nested(UserSchema, only=('email', 'first_name', 'last_name', '_id'), many=True)
     mentees = Nested(UserSchema, only=('email', 'first_name', 'last_name', '_id'), many=True)
-
-
-class CourseSchema(MischiefSchema):
-    name = String(required=True)
-    website = URL(default="")
-    description = String(default="")
-    instructor = Nested(UserSchema, only=('email', 'first_name', 'last_name', '_id'))
-    sections = Nested(SectionSchema, many=True)
-
-    # deserialization only
-    instructor_id = ObjectIdField(required=True, load_only=True)
-
-    @post_load
-    def preprocess(self, data):
-        if 'instructor_id' in data:
-            data['instructor'] = embed_user(data.pop('instructor_id'))
-            return data
-        else:
-            raise ValidationError('Instructor ID required.')
-
-
-class EmbeddedSectionSchema(MischiefSchema):
-    role = String(default='mentee')
-    name = String(required=True)
-    location = String()
-    description = String()
-
-class EmbeddedCourseSchema(MischiefSchema):
-    instructor = Boolean(required=True, default=False)
-    name = String(required=True)
-    website = URL(default="")
-    description = String(default="")
-    sections = Nested(EmbeddedSectionSchema, many=True)
