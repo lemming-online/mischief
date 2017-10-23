@@ -20,11 +20,11 @@ def section_by_id(id, error=False):
 
 # serialize document helpers (READS FROM DB)
 
-def embed_users(ids):
-    return [embed_user(id) for id in ids]
+def embed_users(ids, error=False):
+    return [embed_user(id, error) for id in ids]
 
-def embed_user(id):
-    user = user_by_id(id)
+def embed_user(id, error=False):
+    user = user_by_id(id, error)
     return {
         '_id': user['_id'],
         'first_name': user['first_name'],
@@ -35,7 +35,7 @@ def embed_user(id):
 def embed_sections(ids):
     return [embed_section(id) for id in ids]
 
-def embed_section(id, role='mentee'):
+def embed_section(id):
     section = section_by_id(id)
     return {
         '_id': section['_id'],

@@ -197,12 +197,12 @@ class SectionsView(MischiefView):
             abort(500)
 
     @route('/<section_id>/mentees')
-    def mentors(self, section_id):
+    def mentees(self, section_id):
         return users_schema.dump(mongo.db.sections.find_one_or_404({'_id': section_id},
                                                                    projection=['mentees']))
 
     @route('/<section_id>/mentees', methods=['POST'])
-    def add_mentors(self, data, section_id):
+    def add_mentees(self, data, section_id):
         if 'mentee_id' in data:
             op = {'mentees': embed_user(data['mentee_id'])}
         elif 'mentee_ids' in data:
