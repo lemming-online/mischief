@@ -117,7 +117,7 @@ class AuthenticationView(MischiefView):
     def post(self, data):
         password = data.pop('password')
         user = mongo.db.users.find_one_or_404(data)
-        if user['is_enabled'] and checkpw(password.encode('utf8'), user['password']):
+        if user.get('is_enabled') and checkpw(password.encode('utf8'), user['password']):
             return {'token': create_jwt(str(user['_id']))}
         else:
             abort(401)

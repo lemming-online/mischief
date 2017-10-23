@@ -41,7 +41,7 @@ def initialize(app):
 
     @jwt.jwt_data_loader
     def token_defaults(identity):
-        user = mongo.db.users.find_one({'_id': identity})
+        user = mongo.db.users.find_one({'_id': ObjectId(identity)})
         return {
             'iss': 'lemming:auth',
             'exp': datetime.utcnow() + current_app.config['JWT_EXPIRES'],
@@ -51,7 +51,7 @@ def initialize(app):
             'sub': user['email'],
             'fnm': user['first_name'],
             'lnm': user['last_name'],
-            'uid': user['_id'],
+            'uid': str(user['_id']),
         }
 
     @app.before_first_request
