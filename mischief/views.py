@@ -8,10 +8,12 @@ from bcrypt import checkpw
 from flask import abort, url_for
 from flask_classful import FlaskView, route
 from flask_jwt_simple import create_jwt
+from webargs import fields
+from webargs.flaskparser import use_args
 
 from mischief.mongo import user_by_id, section_by_id, embed_user, embed_users
 from mischief.schema import UserSchema, AuthenticationSchema, EmailSchema, UserImageSchema, SectionSchema
-from mischief.util import mongo, mg
+from mischief.util import mongo, mg, fredis
 from mischief.util.decorators import use_args_with
 
 
@@ -216,3 +218,41 @@ class SectionsView(MischiefView):
             return section_schema.dump(section)
         else:
             abort(500)
+
+class SessionsView(MischiefView):
+    """Sessions API endpoints"""
+
+    def get(self, section_id):
+        return fredis.hgetall('session:' + str(section_id))
+
+    @use_args({'section_id': fields.Str()})
+    def post(self, data):
+        # Create new session
+        section_id = data['section_id']
+
+        if fredis.exists('session:' + section_id):
+            abort(500)
+        else:
+            res = fredis.hmset('session:' + section_id, {'num_tickets': 0, 'helped_tickets': 0})
+
+            if res:
+                return fredis.hgetall('session:' + section_id)
+            else:
+                abort(500)
+
+    def delete(self, section_id):
+        # Close session and perform cleanup
+        res = fredis.delete('session:' + str(section_id))
+        
+        if res:
+            return {'success': True}
+        else:
+            abort(500)
+    
+    """Need a little more research before I implement this
+    @route('/<section_id>/add', methods=['POST'])
+    def add_queue(self, data, section_id):
+            fredis.zadd('queue:' + section_id, key=1.0)
+
+    def remove_queue(self, section_id):
+            fredis.zrem('queue:' + section_id, 'key')"""
