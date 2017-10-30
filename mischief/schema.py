@@ -40,6 +40,16 @@ class ObjectIdField(Field):
         return str(value)
 
 
+class MentorSchema(Schema):
+    mentor_id = ObjectIdField()
+    mentor_ids = ObjectIdField(many=True)
+
+
+class MenteeSchema(Schema):
+    mentee_id = ObjectIdField()
+    mentee_ids = ObjectIdField(many=True)
+
+
 class MischiefSchema(Schema):
     _id = ObjectIdField()
 

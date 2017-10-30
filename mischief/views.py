@@ -7,10 +7,10 @@ import jwt
 from bcrypt import checkpw
 from flask import abort, url_for
 from flask_classful import FlaskView, route
-from flask_jwt_simple import create_jwt
+from flask_jwt_simple import create_jwt, jwt_required
 
 from mischief.mongo import user_by_id, section_by_id, embed_user, embed_users
-from mischief.schema import UserSchema, AuthenticationSchema, EmailSchema, UserImageSchema, SectionSchema
+from mischief.schema import UserSchema, AuthenticationSchema, EmailSchema, UserImageSchema, SectionSchema, MentorSchema, MenteeSchema
 from mischief.util import mongo, mg
 from mischief.util.decorators import use_args_with
 
@@ -41,13 +41,16 @@ class UsersView(MischiefView):
         else:
             abort(500)
 
+    @jwt_required
     def index(self):
         return users_schema.dump(mongo.db.users.find())
 
+    @jwt_required
     def get(self, user_id):
         return user_schema.dump(user_by_id(user_id, error=True))
 
     @use_args_with(UserSchema)
+    @jwt_required
     def patch(self, data, user_id):
         u = mongo.db.users.update_one({'_id': user_id},
                                       {'$set': data})
@@ -57,6 +60,7 @@ class UsersView(MischiefView):
         else:
             abort(500)
 
+    @jwt_required
     def delete(self, user_id):
         d = mongo.db.users.delete_one({'_id': user_id})
         if delete_successful(d):
@@ -66,6 +70,7 @@ class UsersView(MischiefView):
 
     @route('/<user_id>/set_image', methods=['POST'])
     @use_args_with(UserImageSchema, locations=('files',))
+    @jwt_required
     def set_image(self, data, user_id):
         user_by_id(user_id, error=True)
         # TODO: refactor this into an s3 module
@@ -124,6 +129,7 @@ class AuthenticationView(MischiefView):
 
     @route('/reset', methods=['POST'])
     @use_args_with(EmailSchema)
+    @jwt_required
     def reset(self, data):
         user = mongo.db.users.find_one_or_404({'email': data['email']})
         token = jwt.encode(data, user['password'])
@@ -133,6 +139,7 @@ class AuthenticationView(MischiefView):
         return {'success': res.status_code == 200}, res.status_code
 
     @route('/<string:token>')
+    @jwt_required
     def new_password(self, token):
         payload = jwt.decode(token, verify=False)
         user = mongo.db.users.find_one_or_404({'email': payload['email']})
@@ -143,6 +150,7 @@ class AuthenticationView(MischiefView):
 
 class SectionsView(MischiefView):
     """section API endpoints"""
+    decorators = [jwt_required]
 
     @use_args_with(SectionSchema)
     def post(self, data):
@@ -181,6 +189,7 @@ class SectionsView(MischiefView):
                                                                    projection=['mentors']))
 
     @route('/<section_id>/mentors', methods=['POST'])
+    @use_args_with(MentorSchema)
     def add_mentors(self, data, section_id):
         if 'mentor_id' in data:
             op = {'mentors': embed_user(data['mentor_id'])}
@@ -202,6 +211,7 @@ class SectionsView(MischiefView):
                                                                    projection=['mentees']))
 
     @route('/<section_id>/mentees', methods=['POST'])
+    @use_args_with(MenteeSchema)
     def add_mentees(self, data, section_id):
         if 'mentee_id' in data:
             op = {'mentees': embed_user(data['mentee_id'])}
