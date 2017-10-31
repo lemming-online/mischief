@@ -7,6 +7,8 @@ from bson import ObjectId
 from marshmallow import Schema, ValidationError, missing, post_load
 from marshmallow.fields import Email, String, Nested, Field, Boolean, URL, Raw
 
+from mischief.mongo import embed_users
+
 
 # deserializing only
 class EmailSchema(Schema):
@@ -46,8 +48,8 @@ class UserSchema(MischiefSchema):
     email = Email(required=True)
     first_name = String(required=True)
     last_name = String(required=True)
-    password = String(load_only=True)
-    is_enabled = Boolean(default=False)
+    password = String(load_only=True, required=True)
+    is_enabled = Boolean(dump_only=True, default=False)
     mentoring = Nested('SectionSchema',
                        only=('name', 'location', 'description', 'website'), many=True)
     menteeing = Nested('SectionSchema',
@@ -72,3 +74,14 @@ class SectionSchema(MischiefSchema):
     website = URL()
     mentors = Nested(UserSchema, only=('email', 'first_name', 'last_name', '_id'), many=True)
     mentees = Nested(UserSchema, only=('email', 'first_name', 'last_name', '_id'), many=True)
+    mentor_id = ObjectIdField(load_only=True, required=True)
+
+    def get_mentor(self, data):
+        if 'mentor_id' in data:
+            data['mentors'] = embed_users([data['mentor_id']], error=True)
+        return data
+
+    @post_load
+    def preprocess(self, data):
+        data = self.get_mentor(data)
+        return data

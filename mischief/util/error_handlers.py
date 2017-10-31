@@ -26,7 +26,7 @@ def init_error_handlers(app):
         return http_error(error)
 
     @app.errorhandler(DuplicateKeyError)
-    def document_exists_error(error):
+    def document_exists_error(_):
         return generic_error('Document already exists.', 409)
 
     @app.errorhandler(422)
