@@ -205,6 +205,7 @@ class SectionsView(MischiefView):
 
     @route('/<section_id>/mentees', methods=['POST'])
     def add_mentors(self, data, section_id):
+        print(data)
         if 'mentee_id' in data:
             op = {'mentees': embed_user(data['mentee_id'])}
         elif 'mentee_ids' in data:
@@ -229,30 +230,69 @@ class SessionsView(MischiefView):
     def post(self, data):
         # Create new session
         section_id = data['section_id']
+        name_queue = 'queue:' + str(section_id)
+        name_session = 'session:' + str(section_id)
 
-        if fredis.exists('session:' + section_id):
-            abort(500)
+        fredis.delete(name_session, name_queue)
+
+        res = fredis.hmset('session:' + section_id, {'num_tickets': 0, 'helped_tickets': 0})
+
+        if res:
+            return fredis.hgetall('session:' + section_id)
         else:
-            res = fredis.hmset('session:' + section_id, {'num_tickets': 0, 'helped_tickets': 0})
-
-            if res:
-                return fredis.hgetall('session:' + section_id)
-            else:
-                abort(500)
+            abort(500, 'Failed to create session')
 
     def delete(self, section_id):
         # Close session and perform cleanup
         res = fredis.delete('session:' + str(section_id))
         
+        #TODO: Perform cleanup and write to disc
+        
         if res:
             return {'success': True}
         else:
-            abort(500)
+            abort(500, 'Failed to delete from queue')
     
-    """Need a little more research before I implement this
     @route('/<section_id>/add', methods=['POST'])
+    @use_args({'user': fields.Str(required=True), 'question': fields.Str(required=True)})
     def add_queue(self, data, section_id):
-            fredis.zadd('queue:' + section_id, key=1.0)
+        name_queue = 'queue:' + str(section_id)
+        name_session = 'session:' + str(section_id)
+        
+        if fredis.zrank(name_queue, data['user']) != None:
+            abort(500, 'User already in queue')
 
+        res = fredis.zadd(name_queue, 1.0, data['user'])
+              
+        #TODO: Determine algorithm for score
+
+        if res:
+            position = fredis.zrank(name_queue, data['user'])
+            fredis.hincrby(name_session, 'num_tickets', 1)
+
+            return {'position': position + 1}
+        else:
+            abort(500, 'Failed to add to queue')
+
+    @route('/<section_id>/remove', methods=['DELETE'])
     def remove_queue(self, section_id):
-            fredis.zrem('queue:' + section_id, 'key')"""
+        name_queue = 'queue:' + str(section_id)
+        name_session = 'session:' + str(section_id)
+        res = fredis.zremrangebyrank(name_queue, 0, 0)
+        
+        if res:
+            fredis.hincrby(name_session, 'helped_tickets', 1)
+
+            return {'success': True}
+        else:
+            abort(500, 'Failed to remove from queue')
+
+    @route('/<section_id>/queue/<user_id>')
+    def get_position(self, section_id, user_id):
+        name_queue = 'queue:' + str(section_id)
+        res = fredis.zrank(name_queue, str(user_id))
+        
+        if res == None:  
+            abort(500, 'Failed to get position')
+        else:
+            return {'rank': res + 1}
