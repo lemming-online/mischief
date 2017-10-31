@@ -8,7 +8,7 @@ from datetime import datetime
 from os import urandom
 
 from bson import ObjectId
-from flask import Response, jsonify
+from flask import Response, jsonify, current_app
 from flask_cors import CORS
 from flask_jwt_simple import JWTManager
 from flask_pymongo import PyMongo, BSONObjectIdConverter
@@ -22,17 +22,6 @@ cors = CORS()
 mongo = PyMongo()
 
 mg = MailGunner()
-
-
-def token_defaults(app, **kwargs):
-    return {
-        'iss': 'lemming:auth',
-        'exp': datetime.utcnow() + app.config['JWT_EXPIRES'],
-        'iat': datetime.utcnow(),
-        'nbf': datetime.utcnow(),
-        'jti': str(b64encode(urandom(48))),  # nonce
-        **kwargs,
-    }
 
 
 def initialize(app):
@@ -49,6 +38,21 @@ def initialize(app):
     cors.init_app(app)
     mg.init_app(app)
     mongo.init_app(app)
+
+    @jwt.jwt_data_loader
+    def token_defaults(identity):
+        user = mongo.db.users.find_one({'_id': ObjectId(identity)})
+        return {
+            'iss': 'lemming:auth',
+            'exp': datetime.utcnow() + current_app.config['JWT_EXPIRES'],
+            'iat': datetime.utcnow(),
+            'nbf': datetime.utcnow(),
+            'jti': str(b64encode(urandom(48))),  # nonce
+            'sub': user['email'],
+            'fnm': user['first_name'],
+            'lnm': user['last_name'],
+            'uid': str(user['_id']),
+        }
 
     @app.before_first_request
     def ensure_indexes():

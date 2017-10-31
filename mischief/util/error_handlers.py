@@ -17,6 +17,10 @@ def init_error_handlers(app):
     def bad_request(error):
         return http_error(error)
 
+    @app.errorhandler(401)
+    def not_authorized(error):
+        return http_error(error)
+
     @app.errorhandler(404)
     def not_found(error):
         return http_error(error)
