@@ -12,7 +12,7 @@ from webargs import fields
 from webargs.flaskparser import use_args
 
 from mischief.mongo import user_by_id, section_by_id, embed_user, embed_users
-from mischief.schema import UserSchema, AuthenticationSchema, EmailSchema, UserImageSchema, SectionSchema
+from mischief.schema import UserSchema, AuthenticationSchema, EmailSchema, UserImageSchema, SectionSchema, SessionSchema, QuestionSchema
 from mischief.util import mongo, mg, fredis
 from mischief.util.decorators import use_args_with
 
@@ -223,6 +223,9 @@ class SectionsView(MischiefView):
 class SessionsView(MischiefView):
     """Sessions API endpoints"""
 
+    def index(self):
+        return {'sessions': list(fredis.smembers('sessions'))}
+
     def get(self, section_id):
         return fredis.hgetall('session:' + str(section_id))
 
@@ -230,25 +233,44 @@ class SessionsView(MischiefView):
     def post(self, data):
         # Create new session
         section_id = data['section_id']
-        name_queue = 'queue:' + str(section_id)
         name_session = 'session:' + str(section_id)
-
-        fredis.delete(name_session, name_queue)
+        name_queue = 'queue:' + str(section_id)  
+        
+        if fredis.exists(name_session):
+            abort(500, 'Session already exists')
 
         res = fredis.hmset('session:' + section_id, {'num_tickets': 0, 'helped_tickets': 0})
 
         if res:
+            fredis.sadd('sessions', section_id)
+
             return fredis.hgetall('session:' + section_id)
         else:
             abort(500, 'Failed to create session')
 
     def delete(self, section_id):
-        # Close session and perform cleanup
-        res = fredis.delete('session:' + str(section_id))
-        
-        #TODO: Perform cleanup and write to disc
-        
+        # End session and archive
+        name_session = 'session:' + str(section_id)
+        name_queue = 'queue:' + str(section_id)  
+
+        """session_data = fredis.hgetall('session:' + str(section_id))
+        print(session_data)
+
+        i = mongo.db.sections.insert_one(data)
+        if i.acknowledged:
+            return section_schema.dump(section_by_id(i.inserted_id))
+        else:
+            abort(500)
+
+        session = SessionSchema(tickets=)"""
+
+        res = fredis.delete(name_session)
+                
+        #TODO: save and delete questions
         if res:
+            fredis.srem('sessions', section_id)
+            fredis.delete(name_queue)
+
             return {'success': True}
         else:
             abort(500, 'Failed to delete from queue')
@@ -256,19 +278,25 @@ class SessionsView(MischiefView):
     @route('/<section_id>/add', methods=['POST'])
     @use_args({'user': fields.Str(required=True), 'question': fields.Str(required=True)})
     def add_queue(self, data, section_id):
+        # Add user to queue
         name_queue = 'queue:' + str(section_id)
         name_session = 'session:' + str(section_id)
+        name_user = 'users:' + str(section_id)
         
         if fredis.zrank(name_queue, data['user']) != None:
             abort(500, 'User already in queue')
 
-        res = fredis.zadd(name_queue, 1.0, data['user'])
-              
         #TODO: Determine algorithm for score
+        res = fredis.zadd(name_queue, 1.0, data['user'])        
 
         if res:
+            question_num = fredis.hincrby(name_session, 'num_tickets', 1)
+            name_question = 'question:' + str(section_id) + ':' + str(question_num)
+            fredis.hmset(name_question, {'user': data['user'], 'question': data['question'], 'helped': False})
+  
+            fredis.hmset(name_user, {data['user']: question_num})
+
             position = fredis.zrank(name_queue, data['user'])
-            fredis.hincrby(name_session, 'num_tickets', 1)
 
             return {'position': position + 1}
         else:
@@ -276,12 +304,40 @@ class SessionsView(MischiefView):
 
     @route('/<section_id>/remove', methods=['DELETE'])
     def remove_queue(self, section_id):
+        # Remove user with highest priority from queue
         name_queue = 'queue:' + str(section_id)
         name_session = 'session:' + str(section_id)
+        name_user = 'users:' + str(section_id)
+
+        user = fredis.zrange(name_queue, 0, 0)
+        question_num = fredis.hget(name_user, user[0])
+        name_question = 'question:' + str(section_id) + ':' + str(question_num)
+        
         res = fredis.zremrangebyrank(name_queue, 0, 0)
         
         if res:
             fredis.hincrby(name_session, 'helped_tickets', 1)
+            fredis.hmset(name_question, {'helped': True})
+
+            return {'success': True}
+        else:
+            abort(500, 'Failed to remove from queue')
+
+    @route('/<section_id>/remove/<user_id>', methods=['DELETE'])
+    def remove_queue_student(self, section_id, user_id):
+        # Remove specific user from queue
+        name_queue = 'queue:' + str(section_id)
+        name_session = 'session:' + str(section_id)
+        name_user = 'users:' + str(section_id)
+
+        question_num = fredis.hget(name_user, str(user_id))
+        name_question = 'question:' + str(section_id) + ':' + str(question_num)     
+
+        res = fredis.zrem(name_queue, str(user_id))
+        
+        if res:
+            fredis.hincrby(name_session, 'helped_tickets', 1)
+            fredis.hmset(name_question, {'helped': True})
 
             return {'success': True}
         else:
@@ -289,7 +345,9 @@ class SessionsView(MischiefView):
 
     @route('/<section_id>/queue/<user_id>')
     def get_position(self, section_id, user_id):
+        # Get user's position in queue
         name_queue = 'queue:' + str(section_id)
+
         res = fredis.zrank(name_queue, str(user_id))
         
         if res == None:  
