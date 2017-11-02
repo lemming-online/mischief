@@ -90,7 +90,7 @@ class SectionSchema(MischiefSchema):
     location = String()
     description = String()
     website = URL()
-    mentors = Nested(UserSchema, only=('email', 'first_name', 'last_name', '_id'), many=True)
+    mentors = Nested(UserSchema, only=('email', 'first_name', 'last_name', 'feedback', '_id'), many=True)
     mentees = Nested(UserSchema, only=('email', 'first_name', 'last_name', '_id'), many=True)
     mentor_id = ObjectIdField(load_only=True, required=True)
 

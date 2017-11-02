@@ -30,6 +30,7 @@ def embed_user(id, error=False):
         'first_name': user.get('first_name'),
         'last_name': user.get('last_name'),
         'email': user.get('email'),
+        'feedback': user.get('feedback')
     }
 
 def embed_sections(ids):
