@@ -26,10 +26,10 @@ def embed_users(ids, error=False):
 def embed_user(id, error=False):
     user = user_by_id(id, error)
     return {
-        '_id': user['_id'],
-        'first_name': user['first_name'],
-        'last_name': user['last_name'],
-        'email': user['email'],
+        '_id': user.get('_id'),
+        'first_name': user.get('first_name'),
+        'last_name': user.get('last_name'),
+        'email': user.get('email'),
     }
 
 def embed_sections(ids):
@@ -38,9 +38,9 @@ def embed_sections(ids):
 def embed_section(id):
     section = section_by_id(id)
     return {
-        '_id': section['_id'],
-        'name': section['name'],
-        'location': section['location'],
-        'description': section['description'],
-        'website': section['website']
+        '_id': section.get('_id'),
+        'name': section.get('name'),
+        'location': section.get('location'),
+        'description': section.get('description'),
+        'website': section.get('website')
     }
