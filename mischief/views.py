@@ -4,6 +4,8 @@ REST resource views
 """
 import boto3
 import jwt
+import pprint
+from bson import ObjectId
 from bcrypt import checkpw
 from flask import abort, url_for
 from flask_classful import FlaskView, route
@@ -12,7 +14,7 @@ from webargs import fields
 from webargs.flaskparser import use_args
 
 from mischief.mongo import user_by_id, section_by_id, embed_user, embed_users
-from mischief.schema import UserSchema, AuthenticationSchema, EmailSchema, UserImageSchema, SectionSchema, SessionSchema, QuestionSchema
+from mischief.schema import UserSchema, AuthenticationSchema, EmailSchema, UserImageSchema, SectionSchema
 from mischief.util import mongo, mg, fredis
 from mischief.util.decorators import use_args_with
 
@@ -27,7 +29,6 @@ user_schema = UserSchema()
 users_schema = UserSchema(many=True)
 section_schema = SectionSchema()
 sections_schema = SectionSchema(many=True)
-
 
 class MischiefView(FlaskView):
     base_args = ['data']
@@ -205,7 +206,6 @@ class SectionsView(MischiefView):
 
     @route('/<section_id>/mentees', methods=['POST'])
     def add_mentors(self, data, section_id):
-        print(data)
         if 'mentee_id' in data:
             op = {'mentees': embed_user(data['mentee_id'])}
         elif 'mentee_ids' in data:
@@ -251,30 +251,53 @@ class SessionsView(MischiefView):
     def delete(self, section_id):
         # End session and archive
         name_session = 'session:' + str(section_id)
-        name_queue = 'queue:' + str(section_id)  
+        name_queue = 'queue:' + str(section_id)
+        name_question = 'question:' + str(section_id) + ':'
 
-        """session_data = fredis.hgetall('session:' + str(section_id))
-        print(session_data)
+        session_data = fredis.hgetall('session:' + str(section_id))
 
-        i = mongo.db.sections.insert_one(data)
-        if i.acknowledged:
-            return section_schema.dump(section_by_id(i.inserted_id))
-        else:
-            abort(500)
+        question_list = []
 
-        session = SessionSchema(tickets=)"""
+        count = 1
+        while(count <= int(session_data['num_tickets'])):
+            question_data = fredis.hgetall(name_question + str(count))           
 
-        res = fredis.delete(name_session)
+            if question_data != None:
+                question_archive = {
+                    'user': embed_user(ObjectId(question_data['user'])),
+                    'question': question_data['question'],
+                    'helped': question_data['helped'],
+                    'session': ObjectId(section_id)
+                }
+
+                i = mongo.db.questions.insert_one(question_archive)
                 
-        #TODO: save and delete questions
-        if res:
+                if i.acknowledged:
+                    question_list.append(i.inserted_id)
+                    fredis.delete(name_question + str(count))
+                else:
+                    abort(500, 'Failed to close session')
+                
+                count = count + 1
+
+        session_archive = {
+            'section': ObjectId(section_id),
+            'tickets': session_data['num_tickets'],
+            'tickets_helped': session_data['helped_tickets'],
+            'questions': question_list
+        }
+
+        i = mongo.db.sessions.insert_one(session_archive)
+
+        if i.acknowledged:
+            fredis.delete(name_session)
             fredis.srem('sessions', section_id)
             fredis.delete(name_queue)
 
             return {'success': True}
         else:
-            abort(500, 'Failed to delete from queue')
-    
+            abort(500, 'Failed to close session')
+  
     @route('/<section_id>/add', methods=['POST'])
     @use_args({'user': fields.Str(required=True), 'question': fields.Str(required=True)})
     def add_queue(self, data, section_id):

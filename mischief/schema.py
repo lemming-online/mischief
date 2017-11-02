@@ -72,12 +72,3 @@ class SectionSchema(MischiefSchema):
     website = URL()
     mentors = Nested(UserSchema, only=('email', 'first_name', 'last_name', '_id'), many=True)
     mentees = Nested(UserSchema, only=('email', 'first_name', 'last_name', '_id'), many=True)
-
-class QuestionSchema(MischiefSchema):
-    user = Nested('UserSchema', only=('email', 'first_name', 'last_name', '_id'))
-    question = String(required=True)
-
-class SessionSchema(MischiefSchema):
-    questions = Nested('QuestionSchema', many=True)
-    tickets = Integer(required=True)
-    tickets_helped = Integer(required=True)
