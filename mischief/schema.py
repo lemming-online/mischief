@@ -5,7 +5,7 @@ schema for serializing and deserializing model objects
 from bcrypt import hashpw, gensalt
 from bson import ObjectId
 from marshmallow import Schema, ValidationError, missing, post_load
-from marshmallow.fields import Email, String, Nested, Field, Boolean, URL, Raw
+from marshmallow.fields import Email, String, Nested, Field, Boolean, URL, Raw, Integer
 
 from mischief.mongo import embed_users
 
