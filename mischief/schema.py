@@ -88,7 +88,7 @@ class SectionSchema(MischiefSchema):
 
     def get_mentor(self, data):
         if 'mentor_id' in data:
-            data['mentors'] = embed_users([data['mentor_id']], error=True)
+            data['mentors'] = embed_users([data.pop('mentor_id')], error=True)
         return data
 
     @post_load
