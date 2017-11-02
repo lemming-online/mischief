@@ -12,6 +12,7 @@ from flask import Response, jsonify, current_app
 from flask_cors import CORS
 from flask_jwt_simple import JWTManager
 from flask_pymongo import PyMongo, BSONObjectIdConverter
+from flask_redis import FlaskRedis
 
 from .mailgunner import MailGunner
 
@@ -23,13 +24,15 @@ mongo = PyMongo()
 
 mg = MailGunner()
 
+fredis = FlaskRedis(decode_responses=True)
+
 
 def initialize(app):
     """
     handle app extension registration and extra setup
     :param app: app to set up with
     """
-    from mischief.views import UsersView, ActivationView, AuthenticationView, SectionsView
+    from mischief.views import UsersView, ActivationView, AuthenticationView, SectionsView, SessionsView
     from .error_handlers import init_error_handlers
 
     app.url_map.strict_slashes = False
@@ -38,6 +41,7 @@ def initialize(app):
     cors.init_app(app)
     mg.init_app(app)
     mongo.init_app(app)
+    fredis.init_app(app)
 
     # V I E W S
     UsersView.register(app)

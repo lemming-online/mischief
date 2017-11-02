@@ -15,6 +15,7 @@ pylint = "*"
 webargs = "*"
 requests = "*"
 boto3 = "*"
+flask-redis = "*"
 
 [dev-packages]
 pytest = "*"

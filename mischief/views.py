@@ -4,14 +4,18 @@ REST resource views
 """
 import boto3
 import jwt
+import pprint
+from bson import ObjectId
 from bcrypt import checkpw
 from flask import abort, url_for
 from flask_classful import FlaskView, route
 from flask_jwt_simple import create_jwt, jwt_required
+from webargs import fields
+from webargs.flaskparser import use_args
 
 from mischief.mongo import user_by_id, section_by_id, embed_user, embed_users
 from mischief.schema import UserSchema, AuthenticationSchema, EmailSchema, UserImageSchema, SectionSchema, MentorSchema, MenteeSchema, FeedbackSchema
-from mischief.util import mongo, mg
+from mischief.util import mongo, mg, fredis
 from mischief.util.decorators import use_args_with
 
 
@@ -25,7 +29,6 @@ user_schema = UserSchema()
 users_schema = UserSchema(many=True)
 section_schema = SectionSchema()
 sections_schema = SectionSchema(many=True)
-
 
 class MischiefView(FlaskView):
     base_args = ['data']
@@ -249,3 +252,162 @@ class SectionsView(MischiefView):
             return section_schema.dump(section)
         else:
             abort(500, 'Failed to update document')
+  
+
+class SessionsView(MischiefView):
+    """Sessions API endpoints"""
+
+    def index(self):
+        return {'sessions': list(fredis.smembers('sessions'))}
+
+    def get(self, section_id):
+        return fredis.hgetall('session:' + str(section_id))
+
+    @use_args({'section_id': fields.Str()})
+    def post(self, data):
+        # Create new session
+        section_id = data['section_id']
+        name_session = 'session:' + str(section_id)
+        name_queue = 'queue:' + str(section_id)  
+        
+        if fredis.exists(name_session):
+            abort(500, 'Session already exists')
+
+        res = fredis.hmset('session:' + section_id, {'num_tickets': 0, 'helped_tickets': 0})
+
+        if res:
+            fredis.sadd('sessions', section_id)
+
+            return fredis.hgetall('session:' + section_id)
+        else:
+            abort(500, 'Failed to create session')
+
+    def delete(self, section_id):
+        # End session and archive
+        name_session = 'session:' + str(section_id)
+        name_queue = 'queue:' + str(section_id)
+        name_question = 'question:' + str(section_id) + ':'
+
+        session_data = fredis.hgetall('session:' + str(section_id))
+
+        question_list = []
+
+        count = 1
+        while(count <= int(session_data['num_tickets'])):
+            question_data = fredis.hgetall(name_question + str(count))           
+
+            if question_data != None:
+                question_archive = {
+                    'user': embed_user(ObjectId(question_data['user'])),
+                    'question': question_data['question'],
+                    'helped': question_data['helped'],
+                    'session': ObjectId(section_id)
+                }
+
+                i = mongo.db.questions.insert_one(question_archive)
+                
+                if i.acknowledged:
+                    question_list.append(i.inserted_id)
+                    fredis.delete(name_question + str(count))
+                else:
+                    abort(500, 'Failed to close session')
+                
+                count = count + 1
+
+        session_archive = {
+            'section': ObjectId(section_id),
+            'tickets': session_data['num_tickets'],
+            'tickets_helped': session_data['helped_tickets'],
+            'questions': question_list
+        }
+
+        i = mongo.db.sessions.insert_one(session_archive)
+
+        if i.acknowledged:
+            fredis.delete(name_session)
+            fredis.srem('sessions', section_id)
+            fredis.delete(name_queue)
+
+            return {'success': True}
+        else:
+            abort(500, 'Failed to close session')
+  
+    @route('/<section_id>/add', methods=['POST'])
+    @use_args({'user': fields.Str(required=True), 'question': fields.Str(required=True)})
+    def add_queue(self, data, section_id):
+        # Add user to queue
+        name_queue = 'queue:' + str(section_id)
+        name_session = 'session:' + str(section_id)
+        name_user = 'users:' + str(section_id)
+        
+        if fredis.zrank(name_queue, data['user']) != None:
+            abort(500, 'User already in queue')
+
+        #TODO: Determine algorithm for score
+        res = fredis.zadd(name_queue, 1.0, data['user'])        
+
+        if res:
+            question_num = fredis.hincrby(name_session, 'num_tickets', 1)
+            name_question = 'question:' + str(section_id) + ':' + str(question_num)
+            fredis.hmset(name_question, {'user': data['user'], 'question': data['question'], 'helped': False})
+  
+            fredis.hmset(name_user, {data['user']: question_num})
+
+            position = fredis.zrank(name_queue, data['user'])
+
+            return {'position': position + 1}
+        else:
+            abort(500, 'Failed to add to queue')
+
+    @route('/<section_id>/remove', methods=['DELETE'])
+    def remove_queue(self, section_id):
+        # Remove user with highest priority from queue
+        name_queue = 'queue:' + str(section_id)
+        name_session = 'session:' + str(section_id)
+        name_user = 'users:' + str(section_id)
+
+        user = fredis.zrange(name_queue, 0, 0)
+        question_num = fredis.hget(name_user, user[0])
+        name_question = 'question:' + str(section_id) + ':' + str(question_num)
+        
+        res = fredis.zremrangebyrank(name_queue, 0, 0)
+        
+        if res:
+            fredis.hincrby(name_session, 'helped_tickets', 1)
+            fredis.hmset(name_question, {'helped': True})
+
+            return {'success': True}
+        else:
+            abort(500, 'Failed to remove from queue')
+
+    @route('/<section_id>/remove/<user_id>', methods=['DELETE'])
+    def remove_queue_student(self, section_id, user_id):
+        # Remove specific user from queue
+        name_queue = 'queue:' + str(section_id)
+        name_session = 'session:' + str(section_id)
+        name_user = 'users:' + str(section_id)
+
+        question_num = fredis.hget(name_user, str(user_id))
+        name_question = 'question:' + str(section_id) + ':' + str(question_num)     
+
+        res = fredis.zrem(name_queue, str(user_id))
+        
+        if res:
+            fredis.hincrby(name_session, 'helped_tickets', 1)
+            fredis.hmset(name_question, {'helped': True})
+
+            return {'success': True}
+        else:
+            abort(500, 'Failed to remove from queue')
+
+    @route('/<section_id>/queue/<user_id>')
+    def get_position(self, section_id, user_id):
+        # Get user's position in queue
+        name_queue = 'queue:' + str(section_id)
+
+        res = fredis.zrank(name_queue, str(user_id))
+        
+        if res == None:  
+            abort(500, 'Failed to get position')
+        else:
+            return {'rank': res + 1}
