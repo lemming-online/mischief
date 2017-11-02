@@ -17,6 +17,10 @@ def init_error_handlers(app):
     def bad_request(error):
         return http_error(error)
 
+    @app.errorhandler(401)
+    def not_authorized(error):
+        return http_error(error)
+
     @app.errorhandler(404)
     def not_found(error):
         return http_error(error)
@@ -26,7 +30,7 @@ def init_error_handlers(app):
         return http_error(error)
 
     @app.errorhandler(DuplicateKeyError)
-    def document_exists_error(error):
+    def document_exists_error(_):
         return generic_error('Document already exists.', 409)
 
     @app.errorhandler(422)
