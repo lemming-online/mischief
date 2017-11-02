@@ -26,6 +26,11 @@ class UserImageSchema(Schema):
     image = Raw(required=True, load_only=True)
 
 
+# deserializing only
+class FeedbackSchema(Schema):
+    body = String(required=True, load_only=True)
+
+
 class ObjectIdField(Field):
     """field for mongodb ObjectId"""
     def _deserialize(self, value, attr, data):
@@ -65,6 +70,9 @@ class UserSchema(MischiefSchema):
     menteeing = Nested('SectionSchema',
                        only=('name', 'location', 'description', 'website'), many=True)
     image = URL()
+
+    # only for embedding in sections
+    feedback = String(dump_only=True, many=True)
 
     def clean_password(self, data):
         if 'password' in data:

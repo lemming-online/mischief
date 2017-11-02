@@ -10,7 +10,7 @@ from flask_classful import FlaskView, route
 from flask_jwt_simple import create_jwt, jwt_required
 
 from mischief.mongo import user_by_id, section_by_id, embed_user, embed_users
-from mischief.schema import UserSchema, AuthenticationSchema, EmailSchema, UserImageSchema, SectionSchema, MentorSchema, MenteeSchema
+from mischief.schema import UserSchema, AuthenticationSchema, EmailSchema, UserImageSchema, SectionSchema, MentorSchema, MenteeSchema, FeedbackSchema
 from mischief.util import mongo, mg
 from mischief.util.decorators import use_args_with
 
@@ -199,6 +199,19 @@ class SectionsView(MischiefView):
             abort(400, 'Failed to provide mentor_id or mentor_ids')
         u = mongo.db.sections.update_one({'_id': section_id},
                                          {'$push': op})
+        if update_successful(u):
+            section = section_by_id(section_id)
+            return section_schema.dump(section)
+        else:
+            abort(500, 'Failed to update document')
+
+    @route('/<section_id>/mentors/<mentor_id>/feedback', methods=['POST'])
+    @use_args_with(FeedbackSchema)
+    def add_feedback(self, data, section_id, mentor_id):
+        if 'body' not in data:
+            abort(400, 'Failed to include feedback body')
+        u = mongo.db.sections.update_one({'_id': section_id, 'mentors._id': mentor_id},
+                                         {'$push': {'mentors.$.feedback': data['body']}})
         if update_successful(u):
             section = section_by_id(section_id)
             return section_schema.dump(section)
