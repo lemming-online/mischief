@@ -218,6 +218,16 @@ class SectionsView(MischiefView):
         else:
             abort(500, 'Failed to update document')
 
+    @route('/<section_id>/mentors/<mentor_id>/feedback', methods=['DELETE'])
+    def clear_feedback(self, section_id, mentor_id):
+        u = mongo.db.sections.update_one({'_id': section_id, 'mentors._id': mentor_id},
+                                         {'$unset': {'mentors.$.feedback': ''}})
+        if update_successful(u):
+            section = section_by_id(section_id)
+            return section_schema.dump(section)
+        else:
+            abort(500, 'Failed to update document')
+
     @route('/<section_id>/mentees')
     def mentees(self, section_id):
         return mongo.db.sections.find_one_or_404({'_id': section_id},
