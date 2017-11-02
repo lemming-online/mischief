@@ -192,9 +192,9 @@ class SectionsView(MischiefView):
     @use_args_with(MentorSchema)
     def add_mentors(self, data, section_id):
         if 'mentor_id' in data:
-            op = {'mentors': embed_user(data['mentor_id'])}
+            op = {'mentors': embed_user(data['mentor_id'], error=True)}
         elif 'mentor_ids' in data:
-            op = {'mentors': {'$each': embed_users(data['mentor_ids'])}}
+            op = {'mentors': {'$each': embed_users(data['mentor_ids'], error=True)}}
         else:
             abort(400, 'Failed to provide mentor_id or mentor_ids')
         u = mongo.db.sections.update_one({'_id': section_id},
@@ -214,9 +214,9 @@ class SectionsView(MischiefView):
     @use_args_with(MenteeSchema)
     def add_mentees(self, data, section_id):
         if 'mentee_id' in data:
-            op = {'mentees': embed_user(data['mentee_id'])}
+            op = {'mentees': embed_user(data['mentee_id'], error=True)}
         elif 'mentee_ids' in data:
-            op = {'mentees': {'$each': embed_users(data['mentee_ids'])}}
+            op = {'mentees': {'$each': embed_users(data['mentee_ids'], error=True)}}
         else:
             abort(400, 'Failed to provide mentee_id or mentee_ids')
         u = mongo.db.sections.update_one({'_id': section_id},
