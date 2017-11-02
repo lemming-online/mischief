@@ -43,6 +43,14 @@ def initialize(app):
     mongo.init_app(app)
     fredis.init_app(app)
 
+    # V I E W S
+    UsersView.register(app)
+    ActivationView.register(app)
+    AuthenticationView.register(app)
+    SectionsView.register(app)
+
+    init_error_handlers(app)
+
     @jwt.jwt_data_loader
     def token_defaults(identity):
         user = mongo.db.users.find_one({'_id': ObjectId(identity)})
@@ -61,15 +69,6 @@ def initialize(app):
     @app.before_first_request
     def ensure_indexes():
         mongo.db.users.create_index('email', unique=True)
-
-    # V I E W S
-    UsersView.register(app)
-    ActivationView.register(app)
-    AuthenticationView.register(app)
-    SectionsView.register(app)
-    SessionsView.register(app)
-
-    init_error_handlers(app)
 
     class JSONResponse(Response):
         """

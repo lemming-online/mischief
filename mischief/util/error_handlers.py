@@ -25,6 +25,10 @@ def init_error_handlers(app):
     def not_found(error):
         return http_error(error)
 
+    @app.errorhandler(405)
+    def method_not_allowed(error):
+        return http_error(error)
+
     @app.errorhandler(500)
     def server_error(error):
         return http_error(error)

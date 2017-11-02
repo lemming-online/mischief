@@ -26,6 +26,11 @@ class UserImageSchema(Schema):
     image = Raw(required=True, load_only=True)
 
 
+# deserializing only
+class FeedbackSchema(Schema):
+    body = String(required=True, load_only=True)
+
+
 class ObjectIdField(Field):
     """field for mongodb ObjectId"""
     def _deserialize(self, value, attr, data):
@@ -66,6 +71,9 @@ class UserSchema(MischiefSchema):
                        only=('name', 'location', 'description', 'website'), many=True)
     image = URL()
 
+    # only for embedding in sections
+    feedback = String(dump_only=True, many=True)
+
     def clean_password(self, data):
         if 'password' in data:
             data['password'] = hashpw(data['password'].encode('utf8'), gensalt())
@@ -82,13 +90,13 @@ class SectionSchema(MischiefSchema):
     location = String()
     description = String()
     website = URL()
-    mentors = Nested(UserSchema, only=('email', 'first_name', 'last_name', '_id'), many=True)
+    mentors = Nested(UserSchema, only=('email', 'first_name', 'last_name', 'feedback', '_id'), many=True)
     mentees = Nested(UserSchema, only=('email', 'first_name', 'last_name', '_id'), many=True)
     mentor_id = ObjectIdField(load_only=True, required=True)
 
     def get_mentor(self, data):
         if 'mentor_id' in data:
-            data['mentors'] = embed_users([data['mentor_id']], error=True)
+            data['mentors'] = embed_users([data.pop('mentor_id')], error=True)
         return data
 
     @post_load
