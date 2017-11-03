@@ -48,6 +48,7 @@ def initialize(app):
     ActivationView.register(app)
     AuthenticationView.register(app)
     SectionsView.register(app)
+    SessionsView.register(app)
 
     init_error_handlers(app)
 

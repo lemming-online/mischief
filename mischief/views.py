@@ -261,7 +261,7 @@ class SessionsView(MischiefView):
         return {'sessions': list(fredis.smembers('sessions'))}
 
     def get(self, section_id):
-        return fredis.hgetall('session:' + str(section_id))
+        return {'session': fredis.hgetall('session:' + str(section_id))}
 
     @use_args({'section_id': fields.Str()})
     def post(self, data):
@@ -286,15 +286,19 @@ class SessionsView(MischiefView):
         # End session and archive
         name_session = 'session:' + str(section_id)
         name_queue = 'queue:' + str(section_id)
-        name_question = 'question:' + str(section_id) + ':'
+        name_announcements = 'announcements:' + str(section_id)
+        name_user = 'users:' + str(section_id)
 
         session_data = fredis.hgetall('session:' + str(section_id))
+        announcement_data = fredis.lrange(name_announcements, 0, -1)
 
         question_list = []
 
         count = 1
+
         while(count <= int(session_data['num_tickets'])):
-            question_data = fredis.hgetall(name_question + str(count))           
+            name_question = 'question:' + str(section_id) + ':' + str(count)
+            question_data = fredis.hgetall(name_question)        
 
             if question_data != None:
                 question_archive = {
@@ -308,7 +312,7 @@ class SessionsView(MischiefView):
                 
                 if i.acknowledged:
                     question_list.append(i.inserted_id)
-                    fredis.delete(name_question + str(count))
+                    fredis.delete(name_question)
                 else:
                     abort(500, 'Failed to close session')
                 
@@ -318,15 +322,18 @@ class SessionsView(MischiefView):
             'section': ObjectId(section_id),
             'tickets': session_data['num_tickets'],
             'tickets_helped': session_data['helped_tickets'],
-            'questions': question_list
+            'questions': question_list,
+            'announcements': announcement_data
         }
 
         i = mongo.db.sessions.insert_one(session_archive)
 
         if i.acknowledged:
             fredis.delete(name_session)
-            fredis.srem('sessions', section_id)
+            fredis.delete(name_user)
+            fredis.delete(name_announcements)
             fredis.delete(name_queue)
+            fredis.srem('sessions', section_id)
 
             return {'success': True}
         else:
@@ -399,6 +406,25 @@ class SessionsView(MischiefView):
             return {'success': True}
         else:
             abort(500, 'Failed to remove from queue')
+
+
+    @route('/<section_id>/announcements')
+    def get_announcements(self, section_id):
+        name_announcements = 'announcements:' + str(section_id)
+
+        return {'announcements': fredis.lrange(name_announcements, 0, -1)}
+
+    @route('/<section_id>/announcements', methods=['POST'])
+    @use_args({'announcement': fields.Str(required=True)})
+    def add_announcement(self, data, section_id):
+        name_announcements = 'announcements:' + str(section_id)
+
+        res = fredis.lpush(name_announcements, data['announcement'])
+
+        if res:
+            return {'success': True}
+        else:
+            abort(500, 'Announcement failed to post')
 
     @route('/<section_id>/queue/<user_id>')
     def get_position(self, section_id, user_id):
