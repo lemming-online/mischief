@@ -258,9 +258,11 @@ class SessionsView(MischiefView):
     """Sessions API endpoints"""
 
     def index(self):
+        # List of active sessions
         return {'sessions': list(fredis.smembers('sessions'))}
 
     def get(self, section_id):
+        #TODO: Build this out to return more data about a session
         return {'session': fredis.hgetall('session:' + str(section_id))}
 
     @use_args({'section_id': fields.Str()})
@@ -287,10 +289,12 @@ class SessionsView(MischiefView):
         name_session = 'session:' + str(section_id)
         name_queue = 'queue:' + str(section_id)
         name_announcements = 'announcements:' + str(section_id)
+        name_faq = 'faq:' + str(section_id)
         name_user = 'users:' + str(section_id)
 
         session_data = fredis.hgetall('session:' + str(section_id))
         announcement_data = fredis.lrange(name_announcements, 0, -1)
+        faq_data = fredis.lrange(name_faq, 0, -1)
 
         question_list = []
 
@@ -323,7 +327,8 @@ class SessionsView(MischiefView):
             'tickets': session_data['num_tickets'],
             'tickets_helped': session_data['helped_tickets'],
             'questions': question_list,
-            'announcements': announcement_data
+            'announcements': announcement_data,
+            'faqs': [tuple(faq_data[i:i+2]) for i in range(0, len(faq_data), 2)]
         }
 
         i = mongo.db.sessions.insert_one(session_archive)
@@ -332,6 +337,7 @@ class SessionsView(MischiefView):
             fredis.delete(name_session)
             fredis.delete(name_user)
             fredis.delete(name_announcements)
+            fredis.delete(name_faq)
             fredis.delete(name_queue)
             fredis.srem('sessions', section_id)
 
@@ -410,6 +416,7 @@ class SessionsView(MischiefView):
 
     @route('/<section_id>/announcements')
     def get_announcements(self, section_id):
+        # Get all announcements from a session
         name_announcements = 'announcements:' + str(section_id)
 
         return {'announcements': fredis.lrange(name_announcements, 0, -1)}
@@ -417,6 +424,7 @@ class SessionsView(MischiefView):
     @route('/<section_id>/announcements', methods=['POST'])
     @use_args({'announcement': fields.Str(required=True)})
     def add_announcement(self, data, section_id):
+        # Add an announcement to a session
         name_announcements = 'announcements:' + str(section_id)
 
         res = fredis.lpush(name_announcements, data['announcement'])
@@ -425,6 +433,64 @@ class SessionsView(MischiefView):
             return {'success': True}
         else:
             abort(500, 'Announcement failed to post')
+
+    @route('/<section_id>/announcements', methods=['DELETE'])
+    def clear_announcements(self, section_id):
+        # Clear announcements from a session
+        name_announcements = 'announcements:' + str(section_id)
+
+        res = fredis.delete(name_announcements)
+
+        if res:
+            return {'success': True}
+        else:
+            abort(500, 'Failed to delete announcements')
+
+
+    @route('/<section_id>/faq')
+    def get_faqs(self, section_id):
+        # Get all FAQs from a session
+        name_faq = 'faq:' + str(section_id)
+
+        faqs = fredis.lrange(name_faq, 0, -1)
+        return {'faqs': [tuple(faqs[i:i+2]) for i in range(0, len(faqs), 2)]}
+
+    @route('/<section_id>/faq', methods=['POST'])
+    @use_args({'question': fields.Str(required=True), 'answer': fields.Str(required=True)})
+    def add_faq(self, data, section_id):
+        # Add a FAQ
+        name_faq = 'faq:' + str(section_id)
+
+        res = fredis.lpush(name_faq, data['answer'], data['question'])
+
+        if res:
+            return {'success': True}
+        else:
+            abort(500, 'FAQ failed to post')
+
+    @route('/<section_id>/faq', methods=['DELETE'])
+    def clear_faqs(self, section_id):
+        # Clear the FAQ list
+        name_faq = 'faq:' + str(section_id)
+
+        res = fredis.delete(name_faq)
+
+        if res:
+            return {'success': True}
+        else:
+            abort(500, 'Failed to delete faq')
+
+    @route('/<section_id>/queue')
+    def get_queue(self, section_id):
+        # Get the entire queue
+        name_queue = 'queue:' + str(section_id)
+
+        res = fredis.zrangebyscore(name_queue, '-inf', '+inf')
+
+        if res:
+            return {'queue': res}
+        else:
+            abort(500, 'Failed to retrieve queue')
 
     @route('/<section_id>/queue/<user_id>')
     def get_position(self, section_id, user_id):
