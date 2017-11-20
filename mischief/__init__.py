@@ -8,9 +8,11 @@ help room management and ticketing platform
 'lemming.online'
 """
 from flask import Flask
+from flask_socketio import SocketIO
 
 from mischief.util import initialize
 
+socketio = SocketIO()
 
 def create_app(config=None):
     """
@@ -26,5 +28,6 @@ def create_app(config=None):
     _app.config.from_envvar('MISCHIEF_CONFIG', silent=True)
 
     initialize(_app)
+    socketio.init_app(_app)
 
     return _app
