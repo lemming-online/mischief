@@ -11,11 +11,12 @@ bcrypt = "*"
 marshmallow = "*"
 flask-pymongo = "*"
 flask-classful = "*"
-pylint = "*"
 webargs = "*"
 requests = "*"
 boto3 = "*"
 flask-redis = "*"
+peewee = "*"
+psycopg2 = "*"
 
 [dev-packages]
 pytest = "*"
