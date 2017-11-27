@@ -17,7 +17,7 @@ class MailGunner:
         self.key = app.config['MAILGUN_API_KEY']
         self.api = 'https://api.mailgun.net/v3/{}/messages'.format(app.config['MAILGUN_DOMAIN'])
 
-    def send(self, to, content, sender='team lemming <team@lemming.online>', subject='message from team lemming'):
+    def send(self, to, content, sender='Team Lemming <team@lemming.online>', subject='Message from Team Lemming'):
         return requests.post(
             self.api,
             auth=('api', self.key),
