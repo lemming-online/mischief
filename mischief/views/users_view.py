@@ -19,13 +19,19 @@ class UsersView(BaseView):
     # get the current user's account info and group membership
     user_email = get_jwt_identity()
     return {
-      'user': model_to_dict(User.get(User.email == user_email)),
-      'groups': [],
+      'user': model_to_dict(User.get(User.email == user_email), exclude=[User.encrypted_password]),
+      'groups': (Group
+                  .select(Group, UserGroups)
+                  .join(UserGroups)
+                  .join(User)
+                  .where(User.email == user_email)
+                  .dicts()),
     }
 
+  @jwt_required
   def get(self, user_id):
     # get the account info of an arbitrary user
-    return model_to_dict(User.get(User.id == user_id))
+    return model_to_dict(User.get(User.id == user_id), exclude=[User.encrypted_password])
 
   @use_args({
     'first_name': fields.Str(required=True),
@@ -39,6 +45,7 @@ class UsersView(BaseView):
     args['encrypted_password'] = encrypted_password
     return model_to_dict(User.create(**args), exclude=[User.encrypted_password])
 
+  @jwt_required
   @use_args({
     'first_name': fields.Str(required=True),
     'last_name': fields.Str(required=True),
@@ -46,7 +53,12 @@ class UsersView(BaseView):
   })
   def put(self, args):
     # update the current user's account info
-    pass
+    user_email = get_jwt_identity()
+    rows = User.update(**args).where(User.email == user_email)
+    if rows == 1:
+      return model_to_dict(User.get(User.email == user_email))
+    else:
+      abort('500', 'Failed to update user')
 
   @route('/activation', methods=['POST'])
   def start_activation(self):

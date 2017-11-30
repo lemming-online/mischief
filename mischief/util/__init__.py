@@ -47,8 +47,10 @@ def initialize(app):
     db.create_tables([User, Group, UserGroups], safe=True)
 
     from mischief.views.users_view import UsersView
+    from mischief.views.groups_view import GroupsView
     # V I E W S
     UsersView.register(app)
+    GroupsView.register(app)
 
     init_error_handlers(app)
 
