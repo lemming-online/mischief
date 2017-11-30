@@ -43,7 +43,12 @@ class GroupsView(BaseView):
   @route('/<group_id>/people')
   def people(self, group_id):
     # get the people associated with a group, as well as their roles
-    pass
+    return User
+      .select(User, UserGroups)
+      .join(UserGroups)
+      .join(Groups)
+      .where(Group.id == group_id)
+      .dicts()
 
   @route('/<group_id>/people', methods=['POST'])
   @use_args({
@@ -60,7 +65,9 @@ class GroupsView(BaseView):
     pass
 
   @route('/<group_id>/resources', methods=['POST'])
-  @use_args({})
+  @use_args({
+    'resource': fields.Raw(required=True)
+  })
   def add_resource(self, args, group_id):
     # add a new resource to the group, if the current user is a mentor
     pass
