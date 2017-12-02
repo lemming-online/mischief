@@ -42,19 +42,27 @@ class GroupsView(BaseView):
   def put(self, args, group_id):
     # update a group, if the current user is a mentor
     user_email = get_jwt_identity()
-    if User.select().join(UserGroups).where(User.email == user_email & UserGroups.group_id == group_id).count() == 0:
+    if (
+      UserGroups
+        .select()
+        .where(UserGroups.user_id == user_id,
+          UserGroups.group_id == group_id,
+          UserGroups.title == 'mentor')
+        .count() == 0
+    ):
       abort(401, 'Not a mentor')
-    # TODO: fix that ^, finish that v
+    group = Group.get(Group.id == group_id)
+    return model_to_dict(group.update(**args))
 
   @route('/<group_id>/people')
   def people(self, group_id):
     # get the people associated with a group, as well as their roles
-    return User
+    return (User
       .select(User, UserGroups)
       .join(UserGroups)
       .join(Groups)
       .where(Group.id == group_id)
-      .dicts()
+      .dicts())
 
   @route('/<group_id>/people', methods=['POST'])
   @use_args({
@@ -67,10 +75,10 @@ class GroupsView(BaseView):
 
   @route('/<group_id>/resources')
   def resources(self, group_id):
-    return Resource
+    return (Resource
       .select()
       .where(Resource.group_id == group_id)
-      .dicts()
+      .dicts())
 
   @route('/<group_id>/resources', methods=['POST'])
   @use_args({
