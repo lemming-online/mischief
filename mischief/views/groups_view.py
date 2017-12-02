@@ -5,12 +5,15 @@ from webargs import fields
 from webargs.flaskparser import use_args
 
 from mischief.models.group import Group
+from mischief.models.resource import Resource
 from mischief.models.user import User
 from mischief.models.user_groups import UserGroups
 from mischief.views.base_view import BaseView
 
 class GroupsView(BaseView):
   # handle groups
+
+  decorators = [jwt_required]
 
   def get(self, group_id):
     # return a group's details
@@ -38,7 +41,10 @@ class GroupsView(BaseView):
   })
   def put(self, args, group_id):
     # update a group, if the current user is a mentor
-    pass
+    user_email = get_jwt_identity()
+    if User.select().join(UserGroups).where(User.email == user_email & UserGroups.group_id == group_id).count() == 0:
+      abort(401, 'Not a mentor')
+    # TODO: fix that ^, finish that v
 
   @route('/<group_id>/people')
   def people(self, group_id):
@@ -61,14 +67,20 @@ class GroupsView(BaseView):
 
   @route('/<group_id>/resources')
   def resources(self, group_id):
-    # get the resources associated with a group
-    pass
+    return Resource
+      .select()
+      .where(Resource.group_id == group_id)
+      .dicts()
 
   @route('/<group_id>/resources', methods=['POST'])
   @use_args({
-    'resource': fields.Raw(required=True)
+    'url': fields.String(required=True),
+    'title': fields.String(required=True),
+    'description': fields.String(required=True),
   })
   def add_resource(self, args, group_id):
     # add a new resource to the group, if the current user is a mentor
-    pass
+    user_email = get_jwt_identity()
+    current_user = User.get(User.email == user_email)
+    return model_to_dict(Resource.create(user=current_user, group_id=group_id, **args))
 
