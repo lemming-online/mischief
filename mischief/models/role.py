@@ -4,7 +4,7 @@ from mischief.models.base import Base
 from mischief.models.user import User
 from mischief.models.group import Group
 
-class UserGroups(Base):
+class Role(Base):
   user = ForeignKeyField(User)
   group = ForeignKeyField(Group)
   title = CharField()
