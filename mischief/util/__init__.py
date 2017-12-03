@@ -41,10 +41,10 @@ def initialize(app):
 
     from mischief.models.user import User
     from mischief.models.group import Group
-    from mischief.models.user_groups import UserGroups
+    from mischief.models.role import Role
     # models
     db.connect()
-    db.create_tables([User, Group, UserGroups], safe=True)
+    db.create_tables([User, Group, Role], safe=True)
 
     from mischief.views.users_view import UsersView
     from mischief.views.groups_view import GroupsView
