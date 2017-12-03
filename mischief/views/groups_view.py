@@ -1,13 +1,14 @@
 from flask_classful import route
-from flask_jwt_simple import jwt_required, get_jwt_identity, create_jwt
+from flask_jwt_simple import jwt_required, get_jwt_identity, create_jwt, get_jwt
 from playhouse.shortcuts import model_to_dict
 from webargs import fields
 from webargs.flaskparser import use_args
 
+from mischief.models.feedback import Feedback
 from mischief.models.group import Group
 from mischief.models.resource import Resource
-from mischief.models.user import User
 from mischief.models.role import Role
+from mischief.models.user import User
 from mischief.views.base_view import BaseView
 
 class GroupsView(BaseView):
@@ -103,3 +104,20 @@ class GroupsView(BaseView):
     current_user = User.get(User.email == user_email)
     return model_to_dict(Resource.create(user=current_user, group_id=group_id, **args))
 
+  @route('/<group_id>/feedback')
+  def feedback(self, group_id):
+    # get the current user's feedback in a group
+    user_id = get_jwt()['uid']
+    return [f for f in Feedback
+      .select()
+      .where(Feedback.group_id == group_id, Feedback.user_id == user_id)
+      .dicts()]
+
+  @route('/<group_id>/feedback', methods=['POST'])
+  @use_args({
+    'user_id': fields.Integer(required=True),
+    'body': fields.Str(required=True),
+  })
+  def add_feedback(self, args, group_id):
+    # add feedback to a specific user in a specific group
+    return model_to_dict(Feedback.create(group_id=group_id, **args))
