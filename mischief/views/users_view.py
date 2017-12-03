@@ -20,7 +20,7 @@ class UsersView(BaseView):
     # get the current user's account info and group membership
     user_id = get_jwt()['uid']
     return {
-      'user': model_to_dict(User.get(User.email == user_email), exclude=[User.encrypted_password]),
+      'user': model_to_dict(User.get(User.id == user_id), exclude=[User.encrypted_password]),
       'groups': [g for g in Group
                   .select(Group, Role)
                   .join(Role)
