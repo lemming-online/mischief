@@ -20,12 +20,12 @@ class UsersView(BaseView):
     user_email = get_jwt_identity()
     return {
       'user': model_to_dict(User.get(User.email == user_email), exclude=[User.encrypted_password]),
-      'groups': (Group
-                  .select(Group, UserGroups)
-                  .join(UserGroups)
-                  .join(User)
-                  .where(User.email == user_email)
-                  .dicts()),
+      'groups': [g for g in Group
+                .select(Group, UserGroups)
+                .join(UserGroups)
+                .join(User)
+                .where(User.email == user_email)
+                .dicts()],
     }
 
   @jwt_required
