@@ -7,7 +7,7 @@ from webargs.flaskparser import use_args
 from mischief.models.group import Group
 from mischief.models.resource import Resource
 from mischief.models.user import User
-from mischief.models.user_groups import UserGroups
+from mischief.models.role import Role
 from mischief.views.base_view import BaseView
 
 class GroupsView(BaseView):
@@ -30,7 +30,7 @@ class GroupsView(BaseView):
     user_email = get_jwt_identity()
     current_user = User.get(User.email == user_email)
     group = Group.create(**args)
-    UserGroups.create(user=current_user, group=group, title='mentor')
+    Role.create(user=current_user, group=group, title='mentor')
     return model_to_dict(group)
 
   @use_args({
@@ -43,11 +43,11 @@ class GroupsView(BaseView):
     # update a group, if the current user is a mentor
     user_id = get_jwt()['uid']
     if (
-      UserGroups
+      Role
         .select()
-        .where(UserGroups.user_id == user_id,
-          UserGroups.group_id == group_id,
-          UserGroups.title == 'mentor')
+        .where(Role.user_id == user_id,
+          Role.group_id == group_id,
+          Role.title == 'mentor')
         .count() == 0
     ):
       abort(401, 'Not a mentor')
@@ -57,12 +57,12 @@ class GroupsView(BaseView):
   @route('/<group_id>/people')
   def people(self, group_id):
     # get the people associated with a group, as well as their roles
-    return (User
-      .select(User, UserGroups)
-      .join(UserGroups)
-      .join(Groups)
+    return [u for u in User
+      .select(User, Role)
+      .join(Role)
+      .join(Group)
       .where(Group.id == group_id)
-      .dicts())
+      .dicts()]
 
   @route('/<group_id>/people', methods=['POST'])
   @use_args({
@@ -71,14 +71,25 @@ class GroupsView(BaseView):
   })
   def add_person(self, args, group_id):
     # add a new person to the group, if the current user is a mentor
-    pass
+    user_id = get_jwt()['uid']
+    if (
+      Role
+        .select()
+        .where(Role.user_id == user_id,
+          Role.group_id == group_id,
+          Role.title == 'mentor')
+        .count() == 0
+    ):
+      abort(401, 'Not a mentor')
+    Role.create(group_id=group_id, **args)
+    return model_to_dict(Group.get(Group.id == group_id))
 
   @route('/<group_id>/resources')
   def resources(self, group_id):
-    return (Resource
+    return [r for r in Resource
       .select()
       .where(Resource.group_id == group_id)
-      .dicts())
+      .dicts()]
 
   @route('/<group_id>/resources', methods=['POST'])
   @use_args({

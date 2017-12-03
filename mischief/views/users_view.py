@@ -8,7 +8,7 @@ from webargs.flaskparser import use_args
 
 from mischief.models.group import Group
 from mischief.models.user import User
-from mischief.models.user_groups import UserGroups
+from mischief.models.role import Role
 from mischief.views.base_view import BaseView
 from mischief.util import jwt, mail
 
@@ -22,9 +22,9 @@ class UsersView(BaseView):
     return {
       'user': model_to_dict(User.get(User.email == user_email), exclude=[User.encrypted_password]),
       'groups': [g for g in Group
-                  .select(Group, UserGroups)
-                  .join(UserGroups)
-                  .where(UserGroups.user_id == user_id)
+                  .select(Group, Role)
+                  .join(Role)
+                  .where(Role.user_id == user_id)
                   .dicts()],
     }
 
