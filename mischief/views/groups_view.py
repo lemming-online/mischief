@@ -41,7 +41,7 @@ class GroupsView(BaseView):
   })
   def put(self, args, group_id):
     # update a group, if the current user is a mentor
-    user_email = get_jwt_identity()
+    user_id = get_jwt()['uid']
     if (
       UserGroups
         .select()
