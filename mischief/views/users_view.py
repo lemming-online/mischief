@@ -1,7 +1,7 @@
 from bcrypt import hashpw, gensalt, checkpw
-from flask import request
+from flask import request, url_for
 from flask_classful import route
-from flask_jwt_simple import jwt_required, get_jwt_identity, create_jwt
+from flask_jwt_simple import jwt_required, get_jwt_identity, create_jwt, get_jwt
 from playhouse.shortcuts import model_to_dict
 from webargs import fields
 from webargs.flaskparser import use_args
@@ -10,6 +10,7 @@ from mischief.models.group import Group
 from mischief.models.user import User
 from mischief.models.user_groups import UserGroups
 from mischief.views.base_view import BaseView
+from mischief.util import jwt, mail
 
 class UsersView(BaseView):
   # handle user accounts
@@ -17,15 +18,14 @@ class UsersView(BaseView):
   @jwt_required
   def index(self):
     # get the current user's account info and group membership
-    user_email = get_jwt_identity()
+    user_id = get_jwt()['uid']
     return {
       'user': model_to_dict(User.get(User.email == user_email), exclude=[User.encrypted_password]),
       'groups': [g for g in Group
-                .select(Group, UserGroups)
-                .join(UserGroups)
-                .join(User)
-                .where(User.email == user_email)
-                .dicts()],
+                  .select(Group, UserGroups)
+                  .join(UserGroups)
+                  .where(UserGroups.user_id == user_id)
+                  .dicts()],
     }
 
   @jwt_required
@@ -53,22 +53,32 @@ class UsersView(BaseView):
   })
   def put(self, args):
     # update the current user's account info
-    user_email = get_jwt_identity()
-    rows = User.update(**args).where(User.email == user_email)
-    if rows == 1:
-      return model_to_dict(User.get(User.email == user_email))
-    else:
-      abort('500', 'Failed to update user')
+    user_id = get_jwt()['uid']
+    user = User.get(User.id == user_id)
+    return model_to_dict(user.update(**args), exclude=[User.encrypted_password])
 
   @route('/activation', methods=['POST'])
-  def start_activation(self):
+  @use_args({
+    'email': fields.Str(required=True),
+  })
+  def start_activation(self, args):
     # prompt the account activation process and send an email
-    pass
+    user = User.get(User.email == args['email'])
+    token = jwt.encode({'email': user.email}, user.encrypted_password)
+    url = url_for('UsersView:complete_activation', token=str(token, 'utf8'), _external=True)
+    html = '<a href="{}">Click here!</a>'.format(url)
+    res = mail.send(to=user.email, content=html, subject='Activate your Lemming account')
+    return {'success': res.status_code == 200}, res.status_code
 
   @route('/activation/<string:token>')
   def complete_activation(self, token):
     # resolve the account activation process and update the user's status
-    pass
+    payload = jwt.decode(token.encode('utf8'), verify=False)
+    user = User.get(User.email == payload['email'])
+    if not jwt.decode(token, user.encrypted_password):
+      abort(401, 'Failed to validate token')
+    user.update(enabled=True)
+    return 'enabled! ヽ(´ᗜ｀)ノ'
 
   @use_args({
     'email': fields.Str(required=True),
@@ -83,11 +93,23 @@ class UsersView(BaseView):
       abort(401, 'Unauthorized')
 
   @route('/reset', methods=['POST'])
-  def start_reset_password(self):
+  @use_args({
+    'email': fields.Str(required=True),
+  })
+  def start_reset_password(self, args):
     # prompt the password reset process and send an email
-    pass
+    user = User.get(User.email == args['email'])
+    token = jwt.encode({'email': user.email}, user.encrypted_password)
+    url = url_for('UsersView:complete_reset_password', token=str(token, 'utf8'), _external=True)
+    html = '<a href="{}">Click here!</a>'.format(url)
+    res = mail.send(to=user.email, content=html, subject='Reset your Lemming password')
+    return {'success': res.status_code == 200}, res.status_code
 
   @route('/reset/<string:token>')
   def complete_reset_password(self, token):
     # resolve password reset process and update the user's password
-    pass
+    payload = jwt.decode(token.encode('utf8'), verify=False)
+    user = User.get(User.email == payload['email'])
+    if not jwt.decode(token, user.encrypted_password):
+      abort(401, 'Failed to validate token')
+    return 'ᕕ( ᐛ )ᕗ', 303
