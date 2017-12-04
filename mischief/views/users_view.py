@@ -55,7 +55,8 @@ class UsersView(BaseView):
     # update the current user's account info
     user_id = get_jwt()['uid']
     user = User.get(User.id == user_id)
-    return model_to_dict(user.update(**args), exclude=[User.encrypted_password])
+    user.update(**args)
+    return model_to_dict(user, exclude=[User.encrypted_password])
 
   @route('/activation', methods=['POST'])
   @use_args({
