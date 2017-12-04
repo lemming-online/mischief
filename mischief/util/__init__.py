@@ -12,7 +12,7 @@ from flask import Response, jsonify, current_app
 from flask_cors import CORS
 from flask_jwt_simple import JWTManager
 from flask_redis import FlaskRedis
-from peewee import PostgresqlDatabase
+from playhouse.postgres_ext import PostgresqlExtDatabase
 from werkzeug.routing import IntegerConverter
 
 from .mailgunner import MailGunner
@@ -21,7 +21,7 @@ jwt = JWTManager()
 
 cors = CORS()
 
-db = PostgresqlDatabase('mischief_db', host='localhost', user='postgres')
+db = PostgresqlExtDatabase('mischief_db', host='localhost', user='postgres')
 
 mail = MailGunner()
 
@@ -48,9 +48,11 @@ def initialize(app):
 
     from mischief.views.users_view import UsersView
     from mischief.views.groups_view import GroupsView
+    from mischief.views.sessions_view import SessionsView
     # V I E W S
     UsersView.register(app)
     GroupsView.register(app)
+    SessionsView.register(app)
 
     init_error_handlers(app)
 

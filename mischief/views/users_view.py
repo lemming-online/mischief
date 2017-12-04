@@ -23,7 +23,7 @@ class UsersView(BaseView):
       'user': model_to_dict(User.get(User.id == user_id), exclude=[User.encrypted_password]),
       'groups': [g for g in Group
                   .select(Group, Role)
-                  .join(Role)
+                  .join(Role, on=(Group.id == Role.group_id))
                   .where(Role.user_id == user_id)
                   .dicts()],
     }
