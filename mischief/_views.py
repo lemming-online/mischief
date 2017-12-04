@@ -14,14 +14,9 @@ from webargs import fields
 from webargs.flaskparser import use_args
 from flask_socketio import join_room, leave_room, emit, send
 
-<<<<<<< HEAD:mischief/_views.py
 from mischief import socketio
 from mischief.mongo import user_by_id, section_by_id, embed_user, embed_users
 from mischief.schema import UserSchema, AuthenticationSchema, EmailSchema, UserImageSchema, SectionSchema, MentorSchema, MenteeSchema, FeedbackSchema
-=======
-from mischief.mongo import user_by_id, group_by_id, embed_user, embed_users
-from mischief.schema import UserSchema, AuthenticationSchema, EmailSchema, UserImageSchema, GroupSchema, MentorSchema, MenteeSchema, FeedbackSchema
->>>>>>> 099508902ad4b028d460be66f5e6b0ff570bb5b9:mischief/_views.py
 from mischief.util import mongo, mg, fredis
 from mischief.util.decorators import use_args_with
 
@@ -36,7 +31,6 @@ user_schema = UserSchema()
 users_schema = UserSchema(many=True)
 group_schema = GroupSchema()
 groups_schema = GroupSchema(many=True)
-<<<<<<< HEAD:mischief/_views.py
 
 @socketio.on('join')
 def on_join(data):
@@ -49,8 +43,6 @@ def on_leave(data):
     room = data['section_id']
     leave_room(room)
     send('Successfully left room: ' + room)
-=======
->>>>>>> 099508902ad4b028d460be66f5e6b0ff570bb5b9:mischief/_views.py
 
 class MischiefView(FlaskView):
     base_args = ['data']
@@ -179,11 +171,6 @@ class GroupsView(MischiefView):
 
     @use_args_with(GroupSchema)
     def post(self, data):
-<<<<<<< HEAD:mischief/_views.py
-
-=======
-        
->>>>>>> 099508902ad4b028d460be66f5e6b0ff570bb5b9:mischief/_views.py
         i = mongo.db.groups.insert_one(data)
         if i.acknowledged:
             return group_schema.dump(group_by_id(i.inserted_id))
@@ -288,7 +275,6 @@ class SessionsView(MischiefView):
         # List of active sessions
         return {'sessions': list(fredis.smembers('sessions'))}
 
-<<<<<<< HEAD:mischief/_views.py
     def get(self, section_id):
         # Get session information
         session = fredis.hgetall('session:' + str(section_id))
@@ -302,11 +288,6 @@ class SessionsView(MischiefView):
             'announcements': announcements,
             'faqs': [tuple(faqs[i:i+2]) for i in range(0, len(faqs), 2)]
         }
-=======
-    def get(self, group_id):
-        #TODO: Build this out to return more data about a session
-        return {'session': fredis.hgetall('session:' + str(group_id))}
->>>>>>> 099508902ad4b028d460be66f5e6b0ff570bb5b9:mischief/_views.py
 
     @use_args({'group_id': fields.Str()})
     def post(self, data):
@@ -399,12 +380,7 @@ class SessionsView(MischiefView):
         if fredis.zrank(name_queue, data['user']) != None:
             abort(500, 'User already in queue')
 
-<<<<<<< HEAD:mischief/_views.py
         res = fredis.zadd(name_queue, time.time(), data['user'])
-=======
-        #TODO: Determine algorithm for score
-        res = fredis.zadd(name_queue, 1.0, data['user'])
->>>>>>> 099508902ad4b028d460be66f5e6b0ff570bb5b9:mischief/_views.py
 
         if res:
             question_num = fredis.hincrby(name_session, 'num_tickets', 1)
