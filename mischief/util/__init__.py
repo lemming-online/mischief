@@ -21,7 +21,7 @@ jwt = JWTManager()
 
 cors = CORS()
 
-db = PostgresqlExtDatabase('mischief_db', host='localhost', user='postgres')
+db = PostgresqlExtDatabase('mischief_db', host='localhost', user='postgres', register_hstore=False)
 
 mail = MailGunner()
 
