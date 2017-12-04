@@ -4,6 +4,7 @@ verify_ssl = true
 
 [packages]
 flask = "*"
+flask_socketio = "*"
 flask-jwt-simple = "*"
 gunicorn = "*"
 flask-cors = "*"

@@ -1,6 +1,6 @@
 import os
 
-from mischief import create_app
+from mischief import create_app, socketio
 
 os.environ['MISCHIEF_CONFIG'] = 'config.cfg'
-create_app().run(host='0.0.0.0', port=5050, debug=True, threaded=True)
+socketio.run(create_app(), host='0.0.0.0', port=5050, debug=True)
