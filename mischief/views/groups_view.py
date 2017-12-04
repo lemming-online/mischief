@@ -1,6 +1,6 @@
 from flask_classful import route
 from flask_jwt_simple import jwt_required, get_jwt_identity, create_jwt, get_jwt
-from marshmallow import validate
+from marshmallow import validate, Schema
 from playhouse.shortcuts import model_to_dict
 from webargs import fields
 from webargs.flaskparser import use_args
@@ -66,13 +66,12 @@ class GroupsView(BaseView):
       .where(Group.id == group_id)
       .dicts()]
 
+  class EmailSchema(Schema):
+    email = fields.Email(required=True)
+    role = fields.Str(required=True)
+
   @route('/<group_id>/people', methods=['POST'])
-  @use_args({
-    'emails': fields.Nested({
-      'email': fields.Email(),
-    }, many=True, required=True),
-    'role': fields.Str(required=True, validate=validate.OneOf(['mentor', 'mentee']))
-  })
+  @use_args(EmailSchema(many=True))
   def add_people(self, args, group_id):
     # add a new person to the group, if the current user is a mentor
     user_id = get_jwt()['uid']
@@ -85,9 +84,9 @@ class GroupsView(BaseView):
         .count() == 0
     ):
       abort(401, 'Not a mentor')
-    for email in args['emails']:
-      user = User.get(User.email == email)
-      Role.create(group_id=group_id, user=user, title=args['role'])
+    for data in args:
+      user = User.get(User.email == data['email'])
+      Role.create(group_id=group_id, user=user, title=data['role'])
     return model_to_dict(Group.get(Group.id == group_id))
 
   @route('/<group_id>/resources')

@@ -36,7 +36,7 @@ class UsersView(BaseView):
   @use_args({
     'first_name': fields.Str(required=True),
     'last_name': fields.Str(required=True),
-    'email': fields.Str(required=True),
+    'email': fields.Email(required=True),
     'password': fields.Str(required=True),
   })
   def post(self, args):
@@ -49,7 +49,7 @@ class UsersView(BaseView):
   @use_args({
     'first_name': fields.Str(required=True),
     'last_name': fields.Str(required=True),
-    'email': fields.Str(required=True),
+    'email': fields.Email(required=True),
   })
   def put(self, args):
     # update the current user's account info
@@ -59,7 +59,7 @@ class UsersView(BaseView):
 
   @route('/activation', methods=['POST'])
   @use_args({
-    'email': fields.Str(required=True),
+    'email': fields.Email(required=True),
   })
   def start_activation(self, args):
     # prompt the account activation process and send an email
@@ -82,7 +82,7 @@ class UsersView(BaseView):
 
   @route('/login', methods=['POST'])
   @use_args({
-    'email': fields.Str(required=True),
+    'email': fields.Email(required=True),
     'password': fields.Str(required=True),
   })
   def login(self, args):
@@ -95,7 +95,7 @@ class UsersView(BaseView):
 
   @route('/reset', methods=['POST'])
   @use_args({
-    'email': fields.Str(required=True),
+    'email': fields.Email(required=True),
   })
   def start_reset_password(self, args):
     # prompt the password reset process and send an email
@@ -114,3 +114,11 @@ class UsersView(BaseView):
     if not jwt.decode(token, user.encrypted_password):
       abort(401, 'Failed to validate token')
     return 'ᕕ( ᐛ )ᕗ', 303
+
+  @route('/image', methods=['POST'])
+  @use_args({
+    'email': fields.Email(required=True),
+    'image': fields.Raw(required=True),
+  })
+  def set_image(self, args):
+    pass
