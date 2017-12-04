@@ -1,5 +1,6 @@
 from flask_classful import route
 from flask_jwt_simple import jwt_required, get_jwt_identity, create_jwt, get_jwt
+from marshmallow import validate
 from playhouse.shortcuts import model_to_dict
 from webargs import fields
 from webargs.flaskparser import use_args
@@ -70,7 +71,7 @@ class GroupsView(BaseView):
     'emails': fields.Nested({
       'email': fields.Email(),
     }, many=True, required=True)
-    'role': fields.Str(required=True, choices=['mentor', 'mentee'])
+    'role': fields.Str(required=True, validate=validate.OneOf(['mentor', 'mentee']))
   })
   def add_people(self, args, group_id):
     # add a new person to the group, if the current user is a mentor
