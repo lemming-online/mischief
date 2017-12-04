@@ -54,7 +54,11 @@ class GroupsView(BaseView):
     ):
       abort(401, 'Not a mentor')
     group = Group.get(Group.id == group_id)
-    group.update(**args).execute()
+    group.name = args['name']
+    group.location = args['location']
+    group.description = args['description']
+    group.website = args['website']
+    group.save()
     return model_to_dict(group)
 
   @route('/<group_id>/people')
