@@ -7,7 +7,7 @@ from mischief.views.base_view import BaseView
 from mischief.util import fredis
 
 class SessionsView(BaseView):
-    # section handling
+    # group handling
 
     decorators = [jwt_required]
 
@@ -16,15 +16,23 @@ class SessionsView(BaseView):
         return {'sessions': list(fredis.smembers('sessions'))}
 
     def get(self, group_id):
-        #TODO: Build this out to return more data about a session
-        return {'session': fredis.hgetall('session:' + str(group_id))}
+        # Get session information
+        session = fredis.hgetall('session:' + str(group_id))
+        queue = fredis.zrangebyscore('queue:' + str(group_id), '-inf', '+inf')
+        announcements = fredis.lrange('announcements:' + str(group_id), 0, -1)
+        faqs = fredis.lrange('faq:' + str(group_id), 0, -1)
 
-    @use_args({
-      'group_id': fields.Str(required=True),
-    })
-    def post(self, args):
+        return {
+            'session': session,
+            'queue': queue,
+            'announcements': announcements,
+            'faqs': [tuple(faqs[i:i+2]) for i in range(0, len(faqs), 2)]
+        }
+
+    @use_args({'group_id': fields.Str()})
+    def post(self, data):
         # Create new session
-        group_id = args['group_id']
+        group_id = data['group_id']
         name_session = 'session:' + str(group_id)
         name_queue = 'queue:' + str(group_id)
 
@@ -79,7 +87,7 @@ class SessionsView(BaseView):
                 count = count + 1
 
         session_archive = {
-            'group_id': group_id,
+            'group': ObjectId(group_id),
             'tickets': session_data['num_tickets'],
             'tickets_helped': session_data['helped_tickets'],
             'questions': question_list,
@@ -112,8 +120,7 @@ class SessionsView(BaseView):
         if fredis.zrank(name_queue, data['user']) != None:
             abort(500, 'User already in queue')
 
-        #TODO: Determine algorithm for score
-        res = fredis.zadd(name_queue, 1.0, data['user'])
+        res = fredis.zadd(name_queue, time.time(), data['user'])
 
         if res:
             question_num = fredis.hincrby(name_session, 'num_tickets', 1)
@@ -123,6 +130,8 @@ class SessionsView(BaseView):
             fredis.hmset(name_user, {data['user']: question_num})
 
             position = fredis.zrank(name_queue, data['user'])
+
+            socketio.emit('queue', {'queue': fredis.zrangebyscore(name_queue, '-inf', '+inf')}, room=str(group_id))
 
             return {'position': position + 1}
         else:
@@ -145,6 +154,8 @@ class SessionsView(BaseView):
             fredis.hincrby(name_session, 'helped_tickets', 1)
             fredis.hmset(name_question, {'helped': True})
 
+            socketio.emit('queue', {'queue': fredis.zrangebyscore(name_queue, '-inf', '+inf')}, room=str(group_id))
+
             return {'success': True}
         else:
             abort(500, 'Failed to remove from queue')
@@ -164,6 +175,8 @@ class SessionsView(BaseView):
         if res:
             fredis.hincrby(name_session, 'helped_tickets', 1)
             fredis.hmset(name_question, {'helped': True})
+
+            socketio.emit('queue', {'queue': fredis.zrangebyscore(name_queue, '-inf', '+inf')}, room=str(group_id))
 
             return {'success': True}
         else:
@@ -186,6 +199,8 @@ class SessionsView(BaseView):
         res = fredis.lpush(name_announcements, data['announcement'])
 
         if res:
+            socketio.emit('announcements', {'announcements': fredis.lrange(name_announcements, 0, -1)}, room=str(group_id))
+
             return {'success': True}
         else:
             abort(500, 'Announcement failed to post')
@@ -198,6 +213,8 @@ class SessionsView(BaseView):
         res = fredis.delete(name_announcements)
 
         if res:
+            socketio.emit('announcements', {'announcements': []})
+
             return {'success': True}
         else:
             abort(500, 'Failed to delete announcements')

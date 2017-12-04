@@ -30,4 +30,16 @@ def create_app(config=None):
     initialize(_app)
     socketio.init_app(_app)
 
+    @socketio.on('join')
+    def on_join(data):
+        room = data['group_id']
+        join_room(room)
+        send('Successfully joined room: ' + room)
+
+    @socketio.on('leave')
+    def on_leave(data):
+        room = data['group_id']
+        leave_room(room)
+        send('Successfully left room: ' + room)
+
     return _app
