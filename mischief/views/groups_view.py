@@ -67,10 +67,12 @@ class GroupsView(BaseView):
 
   @route('/<group_id>/people', methods=['POST'])
   @use_args({
-    'user_id': fields.Integer(required=True),
+    'emails': fields.Nested({
+      'email': fields.Email(),
+    }, many=True, required=True)
     'role': fields.Str(required=True, choices=['mentor', 'mentee'])
   })
-  def add_person(self, args, group_id):
+  def add_people(self, args, group_id):
     # add a new person to the group, if the current user is a mentor
     user_id = get_jwt()['uid']
     if (
@@ -82,7 +84,9 @@ class GroupsView(BaseView):
         .count() == 0
     ):
       abort(401, 'Not a mentor')
-    Role.create(group_id=group_id, **args)
+    for email in args['emails']:
+      user = User.get(User.email == email)
+      Role.create(group_id=group_id, user=user, title=args['role'])
     return model_to_dict(Group.get(Group.id == group_id))
 
   @route('/<group_id>/resources')
