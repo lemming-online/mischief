@@ -1,3 +1,4 @@
+import jwt
 from bcrypt import hashpw, gensalt, checkpw
 from flask import request, url_for
 from flask_classful import route
@@ -10,7 +11,7 @@ from mischief.models.group import Group
 from mischief.models.user import User
 from mischief.models.role import Role
 from mischief.views.base_view import BaseView
-from mischief.util import jwt, mail
+from mischief.util import mail
 
 class UsersView(BaseView):
   # handle user accounts
