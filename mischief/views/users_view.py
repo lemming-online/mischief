@@ -82,7 +82,8 @@ class UsersView(BaseView):
     user = User.get(User.email == payload['email'])
     if not jwt.decode(token, user.encrypted_password):
       abort(401, 'Failed to validate token')
-    user.update(enabled=True)
+    user.is_enabled = True
+    user.save()
     return 'enabled! ヽ(´ᗜ｀)ノ'
 
   @route('/login', methods=['POST'])
