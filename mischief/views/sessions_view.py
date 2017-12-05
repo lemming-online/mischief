@@ -1,8 +1,15 @@
+import time
+
+from flask import abort
 from flask_classful import route
-from flask_jwt_simple import jwt_required
+from flask_jwt_simple import jwt_required, get_jwt
 from webargs import fields
 from webargs.flaskparser import use_args
+from playhouse.shortcuts import model_to_dict
+from flask_socketio import join_room, leave_room, emit, send
 
+from mischief import socketio
+from mischief.models.user import User
 from mischief.views.base_view import BaseView
 from mischief.util import fredis
 
@@ -30,9 +37,9 @@ class SessionsView(BaseView):
         }
 
     @use_args({'group_id': fields.Str()})
-    def post(self, data):
+    def post(self, args):
         # Create new session
-        group_id = data['group_id']
+        group_id = args['group_id']
         name_session = 'session:' + str(group_id)
         name_queue = 'queue:' + str(group_id)
 
@@ -70,24 +77,19 @@ class SessionsView(BaseView):
 
             if question_data != None:
                 question_archive = {
-                    'user': embed_user(ObjectId(question_data['user'])),
+                    'user': model_to_dict(User.get(User.id == question_data['user']), exclude=[User.encrypted_password]),
                     'question': question_data['question'],
                     'helped': question_data['helped'],
-                    'session': ObjectId(group_id)
+                    'session': group_id
                 }
 
-                i = mongo.db.questions.insert_one(question_archive)
-
-                if i.acknowledged:
-                    question_list.append(i.inserted_id)
-                    fredis.delete(name_question)
-                else:
-                    abort(500, 'Failed to close session')
+                question_list.append(question_archive)
+                fredis.delete(name_question)
 
                 count = count + 1
 
         session_archive = {
-            'group': ObjectId(group_id),
+            'group': group_id,
             'tickets': session_data['num_tickets'],
             'tickets_helped': session_data['helped_tickets'],
             'questions': question_list,
@@ -95,41 +97,36 @@ class SessionsView(BaseView):
             'faqs': [tuple(faq_data[i:i+2]) for i in range(0, len(faq_data), 2)]
         }
 
-        i = mongo.db.sessions.insert_one(session_archive)
+        fredis.delete(name_session)
+        fredis.delete(name_user)
+        fredis.delete(name_announcements)
+        fredis.delete(name_faq)
+        fredis.delete(name_queue)
+        fredis.srem('sessions', group_id)
 
-        if i.acknowledged:
-            fredis.delete(name_session)
-            fredis.delete(name_user)
-            fredis.delete(name_announcements)
-            fredis.delete(name_faq)
-            fredis.delete(name_queue)
-            fredis.srem('sessions', group_id)
-
-            return {'success': True}
-        else:
-            abort(500, 'Failed to close session')
+        return {'success': True}
 
     @route('/<group_id>/add', methods=['POST'])
     @use_args({'user': fields.Str(required=True), 'question': fields.Str(required=True)})
-    def add_queue(self, data, group_id):
+    def add_queue(self, args, group_id):
         # Add user to queue
         name_queue = 'queue:' + str(group_id)
         name_session = 'session:' + str(group_id)
         name_user = 'users:' + str(group_id)
 
-        if fredis.zrank(name_queue, data['user']) != None:
+        if fredis.zrank(name_queue, args['user']) != None:
             abort(500, 'User already in queue')
 
-        res = fredis.zadd(name_queue, time.time(), data['user'])
+        res = fredis.zadd(name_queue, time.time(), args['user'])
 
         if res:
             question_num = fredis.hincrby(name_session, 'num_tickets', 1)
             name_question = 'question:' + str(group_id) + ':' + str(question_num)
-            fredis.hmset(name_question, {'user': data['user'], 'question': data['question'], 'helped': False})
+            fredis.hmset(name_question, {'user': args['user'], 'question': args['question'], 'helped': False})
 
-            fredis.hmset(name_user, {data['user']: question_num})
+            fredis.hmset(name_user, {args['user']: question_num})
 
-            position = fredis.zrank(name_queue, data['user'])
+            position = fredis.zrank(name_queue, args['user'])
 
             socketio.emit('queue', {'queue': fredis.zrangebyscore(name_queue, '-inf', '+inf')}, room=str(group_id))
 
@@ -230,11 +227,11 @@ class SessionsView(BaseView):
 
     @route('/<group_id>/faq', methods=['POST'])
     @use_args({'question': fields.Str(required=True), 'answer': fields.Str(required=True)})
-    def add_faq(self, data, group_id):
+    def add_faq(self, args, group_id):
         # Add a FAQ
         name_faq = 'faq:' + str(group_id)
 
-        res = fredis.lpush(name_faq, data['answer'], data['question'])
+        res = fredis.lpush(name_faq, args['answer'], args['question'])
 
         if res:
             return {'success': True}
@@ -263,7 +260,7 @@ class SessionsView(BaseView):
         if res:
             return {'queue': res}
         else:
-            abort(500, 'Failed to retrieve queue')
+            abort(500, 'Empty queue')
 
     @route('/<group_id>/queue/<user_id>')
     def get_position(self, group_id, user_id):
@@ -275,4 +272,4 @@ class SessionsView(BaseView):
         if res == None:
             abort(500, 'Failed to get position')
         else:
-            return {'rank': res + 1}
+            return {'position': res + 1}
