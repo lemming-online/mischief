@@ -7,6 +7,7 @@ mischief is the primary backend component of the
 help room management and ticketing platform
 'lemming.online'
 """
+import os
 from flask import Flask
 from flask_socketio import SocketIO
 
@@ -26,6 +27,8 @@ def create_app(config=None):
     _app.config.from_object('mischief.config.Default')
     _app.config.from_object(config or {})
     _app.config.from_envvar('MISCHIEF_CONFIG', silent=True)
+
+    _app.config['UPLOAD_FOLDER'] = os.path.dirname(os.path.realpath(__file__)) + '/static/'
 
     initialize(_app)
     socketio.init_app(_app)
