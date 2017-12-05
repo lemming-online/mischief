@@ -88,7 +88,7 @@ class UsersView(BaseView):
 
   @route('/login', methods=['POST'])
   @use_args({
-    'email': fields.Email(required=True),
+    'email': fields.Str(required=True),
     'password': fields.Str(required=True),
   })
   def login(self, args):
