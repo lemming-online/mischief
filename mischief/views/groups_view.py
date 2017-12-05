@@ -1,3 +1,4 @@
+from flask import abort
 from flask_classful import route
 from flask_jwt_simple import jwt_required, get_jwt_identity, create_jwt, get_jwt
 from marshmallow import validate, Schema

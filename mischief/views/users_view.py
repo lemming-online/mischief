@@ -1,6 +1,6 @@
 import jwt
 from bcrypt import hashpw, gensalt, checkpw
-from flask import request, url_for
+from flask import request, url_for, abort
 from flask_classful import route
 from flask_jwt_simple import jwt_required, get_jwt_identity, create_jwt, get_jwt
 from playhouse.shortcuts import model_to_dict
