@@ -1,9 +1,11 @@
 import jwt
+import os
 from bcrypt import hashpw, gensalt, checkpw
-from flask import request, url_for, abort
+from flask import request, url_for, abort, current_app
 from flask_classful import route
 from flask_jwt_simple import jwt_required, get_jwt_identity, create_jwt, get_jwt
 from playhouse.shortcuts import model_to_dict
+from PIL import Image
 from webargs import fields
 from webargs.flaskparser import use_args
 
@@ -122,9 +124,15 @@ class UsersView(BaseView):
     return 'ᕕ( ᐛ )ᕗ', 303
 
   @route('/image', methods=['POST'])
+  @jwt_required
   @use_args({
-    'email': fields.Email(required=True),
     'image': fields.Raw(required=True),
-  })
+  }, locations=('files',))
   def set_image(self, args):
-    pass
+    # set the current user's profile image
+    user_id = get_jwt()['uid']
+    _, file_extension = os.path.splitext(args['image'].filename)
+    path = current_app.config['UPLOAD_FOLDER'] + str(user_id) + file_extension
+    args['image'].save(path)
+    return {'url': request.host + '/static/' + str(user_id) + file_extension}
+
