@@ -1,7 +1,11 @@
 import jwt
 import os
 from bcrypt import hashpw, gensalt, checkpw
+<<<<<<< HEAD
 from flask import request, url_for, abort, current_app
+=======
+from flask import request, url_for, current_app
+>>>>>>> 9886ddc99688d63020a3e5f5441e56b98b454e1d
 from flask_classful import route
 from flask_jwt_simple import jwt_required, get_jwt_identity, create_jwt, get_jwt
 from playhouse.shortcuts import model_to_dict
