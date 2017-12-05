@@ -1,11 +1,7 @@
 import jwt
 import os
 from bcrypt import hashpw, gensalt, checkpw
-<<<<<<< HEAD
 from flask import request, url_for, abort, current_app
-=======
-from flask import request, url_for, current_app
->>>>>>> 9886ddc99688d63020a3e5f5441e56b98b454e1d
 from flask_classful import route
 from flask_jwt_simple import jwt_required, get_jwt_identity, create_jwt, get_jwt
 from playhouse.shortcuts import model_to_dict
@@ -138,5 +134,8 @@ class UsersView(BaseView):
     _, file_extension = os.path.splitext(args['image'].filename)
     path = current_app.config['UPLOAD_FOLDER'] + str(user_id) + file_extension
     args['image'].save(path)
-    return {'url': request.host + '/static/' + str(user_id) + file_extension}
+    user = User.get(User.id == user_id)
+    user.image = request.host + '/static/' + str(user_id) + file_extension
+    user.save()
+    return {'url': user.image}
 
