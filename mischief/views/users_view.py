@@ -86,7 +86,7 @@ class UsersView(BaseView):
       abort(401, 'Failed to validate token')
     user.is_enabled = True
     user.save()
-    return redirect('https://lemming.online/login')
+    return redirect('https://lemming.online/login?activated=true')
 
   @route('/login', methods=['POST'])
   @use_args({

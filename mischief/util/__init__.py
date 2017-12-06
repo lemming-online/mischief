@@ -14,6 +14,7 @@ from flask_jwt_simple import JWTManager
 from flask_redis import FlaskRedis
 from playhouse.postgres_ext import PostgresqlExtDatabase
 from werkzeug.routing import IntegerConverter
+from os import environ
 
 from .mailgunner import MailGunner
 
@@ -21,7 +22,10 @@ jwt = JWTManager()
 
 cors = CORS()
 
-db = PostgresqlExtDatabase('mischief_db', host='localhost', user='postgres', register_hstore=False)
+if environ.get('MISCHIEF_PROD'):
+    db = PostgresqlExtDatabase(environ.get('DATABASE_URL'))
+else:
+    db = PostgresqlExtDatabase('mischief_db', host='localhost', user='postgres', register_hstore=False)
 
 mail = MailGunner()
 
