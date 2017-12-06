@@ -11,6 +11,7 @@ from flask_socketio import join_room, leave_room, emit, send
 from mischief import socketio
 from mischief.models.user import User
 from mischief.models.group import Group
+from mischief.models.session_archive import SessionArchive
 from mischief.views.base_view import BaseView
 from mischief.util import fredis
 
@@ -107,6 +108,8 @@ class SessionsView(BaseView):
             'average_response_time': average_response_time
         }
 
+        archive = SessionArchive.create(data=session_archive, group_id=group_id)
+
         fredis.delete(name_session)
         fredis.delete(name_user)
         fredis.delete(name_announcements)
@@ -114,7 +117,7 @@ class SessionsView(BaseView):
         fredis.delete(name_queue)
         fredis.srem('sessions', group_id)
 
-        return {'success': True}
+        return model_to_dict(archive)
 
     @route('/<group_id>/add', methods=['POST'])
     @use_args({'user': fields.Str(required=True), 'question': fields.Str(required=True)})
