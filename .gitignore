@@ -102,3 +102,8 @@ ENV/
 
 # mypy
 .mypy_cache/
+
+.vscode/settings.json
+
+mischief/static/*.jpg
+mischief/static/*.png

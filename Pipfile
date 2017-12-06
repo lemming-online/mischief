@@ -4,7 +4,7 @@ verify_ssl = true
 
 [packages]
 flask = "*"
-flask_socketio = "*"
+flask-socketio = "*"
 flask-jwt-simple = "*"
 gunicorn = "*"
 flask-cors = "*"
@@ -12,11 +12,14 @@ bcrypt = "*"
 marshmallow = "*"
 flask-pymongo = "*"
 flask-classful = "*"
-pylint = "*"
 webargs = "*"
 requests = "*"
 boto3 = "*"
 flask-redis = "*"
+peewee = "*"
+psycopg2 = "*"
+pillow = "*"
+eventlet = "*"
 
 [dev-packages]
 pytest = "*"
