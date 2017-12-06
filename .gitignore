@@ -105,4 +105,5 @@ ENV/
 
 .vscode/settings.json
 
-mischief/static/*
+mischief/static/*.jpg
+mischief/static/*.png
