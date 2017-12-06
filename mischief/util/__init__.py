@@ -24,7 +24,7 @@ cors = CORS()
 
 if environ.get('MISCHIEF_PROD'):
     print(environ.get('DATABASE_URL'))
-    db = PostgresqlExtDatabase(environ.get('DATABASE_URL'))
+    db = PostgresqlExtDatabase('mischief_db', dsn=environ.get('DATABASE_URL'), register_hstore=False)
 else:
     db = PostgresqlExtDatabase('mischief_db', host='localhost', user='postgres', register_hstore=False)
 
