@@ -89,9 +89,9 @@ class GroupsView(BaseView):
         .count() == 0
     ):
       abort(401, 'Not a mentor')
-    for data in args:
-      user = User.get(User.email == data['email'])
-      Role.create(group_id=group_id, user=user, title=data['role'])
+    for email in args['emails']:
+      user = User.get(User.email == email)
+      Role.create(group_id=group_id, user=user, title=args['role'])
     return model_to_dict(Group.get(Group.id == group_id))
 
   @route('/<group_id>/resources')
