@@ -75,7 +75,7 @@ class GroupsView(BaseView):
   @route('/<group_id>/people', methods=['POST'])
   @use_args({
     'emails': fields.DelimitedList(fields.Str, required=True),
-    'role': fields.Str(),
+    'role': fields.Str(required=True, validate=validate.OneOf(['mentor', 'mentee'])),
   })
   def add_people(self, args, group_id):
     # add a new person to the group, if the current user is a mentor
