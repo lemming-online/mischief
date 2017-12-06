@@ -23,7 +23,6 @@ jwt = JWTManager()
 cors = CORS()
 
 if environ.get('MISCHIEF_PROD'):
-    print(environ.get('DATABASE_URL'))
     db = PostgresqlExtDatabase('mischief_db', dsn=environ.get('DATABASE_URL'), register_hstore=False)
 else:
     db = PostgresqlExtDatabase('mischief_db', host='localhost', user='postgres', register_hstore=False)
@@ -47,9 +46,12 @@ def initialize(app):
     from mischief.models.user import User
     from mischief.models.group import Group
     from mischief.models.role import Role
+    from mischief.models.feedback import Feedback
+    from mischief.models.resource import Resource
+    from mischief.models.session_archive import SessionArchive
     # models
     db.connect()
-    db.create_tables([User, Group, Role], safe=True)
+    db.create_tables([User, Group, Role, Feedback, Resource, SessionArchive], safe=True)
 
     from mischief.views.users_view import UsersView
     from mischief.views.groups_view import GroupsView
