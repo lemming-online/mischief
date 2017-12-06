@@ -94,8 +94,11 @@ class SessionsView(BaseView):
                     total_time = total_time + int(question_archive['helped_time'])
 
                 count = count + 1
-
-        average_response_time = count > 1 ? total_time / (count - 1) : 0
+        
+        if count > 1:
+            average_response_time = total_time / (count - 1)
+        else:
+            average_response_time = 0
 
         session_archive = {
             'group': model_to_dict(Group.get(Group.id == group_id)),
