@@ -10,12 +10,13 @@ from flask_socketio import join_room, leave_room, emit, send
 
 from mischief import socketio
 from mischief.models.user import User
+from mischief.models.group import Group
 from mischief.models.session_archive import SessionArchive
 from mischief.views.base_view import BaseView
 from mischief.util import fredis
 
 class SessionsView(BaseView):
-    # group handling
+    # Group Handling
 
     decorators = [jwt_required]
 
@@ -37,17 +38,18 @@ class SessionsView(BaseView):
             'faqs': [tuple(faqs[i:i+2]) for i in range(0, len(faqs), 2)]
         }
 
-    @use_args({'group_id': fields.Str()})
+    @use_args({'group_id': fields.Str(), 'title': fields.Str()})
     def post(self, args):
         # Create new session
         group_id = args['group_id']
+        title = args['title']
         name_session = 'session:' + str(group_id)
         name_queue = 'queue:' + str(group_id)
 
         if fredis.exists(name_session):
             abort(500, 'Session already exists')
 
-        res = fredis.hmset('session:' + group_id, {'num_tickets': 0, 'helped_tickets': 0})
+        res = fredis.hmset('session:' + group_id, {'title': title, 'num_tickets': 0, 'helped_tickets': 0})
 
         if res:
             fredis.sadd('sessions', group_id)
@@ -71,6 +73,7 @@ class SessionsView(BaseView):
         question_list = []
 
         count = 1
+        total_time = 0
 
         while(count <= int(session_data['num_tickets'])):
             name_question = 'question:' + str(group_id) + ':' + str(count)
@@ -81,21 +84,28 @@ class SessionsView(BaseView):
                     'user': model_to_dict(User.get(User.id == question_data['user']), exclude=[User.encrypted_password]),
                     'question': question_data['question'],
                     'helped': question_data['helped'],
-                    'session': group_id
+                    'helped_time': question_data['helped_time']
                 }
 
                 question_list.append(question_archive)
                 fredis.delete(name_question)
 
+                if bool(question_archive['helped']) == True:
+                    total_time = total_time + int(question_archive['helped_time'])
+                
                 count = count + 1
 
+        average_response_time = total_time / (count - 1)
+
         session_archive = {
-            'group': group_id,
+            'group': model_to_dict(Group.get(Group.id == group_id)),
+            'title': session_data['title'],
             'tickets': session_data['num_tickets'],
             'tickets_helped': session_data['helped_tickets'],
             'questions': question_list,
             'announcements': announcement_data,
-            'faqs': [tuple(faq_data[i:i+2]) for i in range(0, len(faq_data), 2)]
+            'faqs': [tuple(faq_data[i:i+2]) for i in range(0, len(faq_data), 2)],
+            'average_response_time': average_response_time
         }
 
         archive = SessionArchive.create(data=session_archive, group_id=group_id)
@@ -125,7 +135,7 @@ class SessionsView(BaseView):
         if res:
             question_num = fredis.hincrby(name_session, 'num_tickets', 1)
             name_question = 'question:' + str(group_id) + ':' + str(question_num)
-            fredis.hmset(name_question, {'user': args['user'], 'question': args['question'], 'helped': False})
+            fredis.hmset(name_question, {'user': args['user'], 'question': args['question'], 'helped': False, 'helped_time': int(round(time.time()))})
 
             fredis.hmset(name_user, {args['user']: question_num})
 
@@ -154,6 +164,10 @@ class SessionsView(BaseView):
             fredis.hincrby(name_session, 'helped_tickets', 1)
             fredis.hmset(name_question, {'helped': True})
 
+            start_time = int(fredis.hget(name_question, 'helped_time'))
+            elapsed_time = int(round(time.time())) - start_time
+            fredis.hmset(name_question, {'helped_time': elapsed_time })
+
             socketio.emit('queue', {'queue': fredis.zrangebyscore(name_queue, '-inf', '+inf')}, room=str(group_id))
 
             return {'success': True}
@@ -176,12 +190,34 @@ class SessionsView(BaseView):
             fredis.hincrby(name_session, 'helped_tickets', 1)
             fredis.hmset(name_question, {'helped': True})
 
+            start_time = int(fredis.hget(name_question, 'helped_time'))
+            elapsed_time = int(round(time.time())) - start_time
+            fredis.hmset(name_question, {'helped_time': elapsed_time })
+
             socketio.emit('queue', {'queue': fredis.zrangebyscore(name_queue, '-inf', '+inf')}, room=str(group_id))
 
             return {'success': True}
         else:
             abort(500, 'Failed to remove from queue')
 
+    @route('/<group_id>/cancel/<user_id>', methods=['DELETE'])
+    def cancel_queue_student(self, group_id, user_id):
+        # Cancel a specific user from queue
+        name_queue = 'queue:' + str(group_id)
+        name_session = 'session:' + str(group_id)
+        name_user = 'users:' + str(group_id)
+
+        question_num = fredis.hget(name_user, str(user_id))
+        name_question = 'question:' + str(group_id) + ':' + str(question_num)
+
+        res = fredis.zrem(name_queue, str(user_id))
+
+        if res:
+            socketio.emit('queue', {'queue': fredis.zrangebyscore(name_queue, '-inf', '+inf')}, room=str(group_id))
+
+            return {'success': True}
+        else:
+            abort(500, 'Failed to remove from queue')
 
     @route('/<group_id>/announcements')
     def get_announcements(self, group_id):
