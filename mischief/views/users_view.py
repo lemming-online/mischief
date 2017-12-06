@@ -1,7 +1,7 @@
 import jwt
 import os
 from bcrypt import hashpw, gensalt, checkpw
-from flask import request, url_for, abort, current_app
+from flask import request, url_for, abort, current_app, redirect
 from flask_classful import route
 from flask_jwt_simple import jwt_required, get_jwt_identity, create_jwt, get_jwt
 from playhouse.shortcuts import model_to_dict
@@ -86,7 +86,7 @@ class UsersView(BaseView):
       abort(401, 'Failed to validate token')
     user.is_enabled = True
     user.save()
-    return 'enabled! ヽ(´ᗜ｀)ノ'
+    return redirect('https://lemming.online/login')
 
   @route('/login', methods=['POST'])
   @use_args({
@@ -109,19 +109,24 @@ class UsersView(BaseView):
     # prompt the password reset process and send an email
     user = User.get(User.email == args['email'])
     token = jwt.encode({'email': user.email}, user.encrypted_password)
-    url = url_for('UsersView:complete_reset_password', token=str(token, 'utf8'), _external=True)
+    url = 'https://lemming.online/reset_password?token={}'.format(str(token))
     html = '<a href="{}">Click here!</a>'.format(url)
     res = mail.send(to=user.email, content=html, subject='Reset your Lemming password')
     return {'success': res.status_code == 200}, res.status_code
 
-  @route('/reset/<string:token>')
+  @route('/reset/<string:token>', methods=['POST'])
+  @use_args({
+    'new_password', fields.String(required=True),
+  })
   def complete_reset_password(self, token):
     # resolve password reset process and update the user's password
     payload = jwt.decode(token.encode('utf8'), verify=False)
     user = User.get(User.email == payload['email'])
     if not jwt.decode(token, user.encrypted_password):
       abort(401, 'Failed to validate token')
-    return 'ᕕ( ᐛ )ᕗ', 303
+    user.encrypted_password = hashpw(args['new_password'].encode('utf8'), gensalt())
+    user.save()
+    return model_to_dict(user, exclude=[User.encrypted_password])
 
   @route('/image', methods=['POST'])
   @jwt_required
