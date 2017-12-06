@@ -72,12 +72,11 @@ class GroupsView(BaseView):
       .where(Group.id == group_id)
       .dicts()]
 
-  class EmailSchema(Schema):
-    email = fields.Email(required=True)
-    role = fields.Str(required=True)
-
   @route('/<group_id>/people', methods=['POST'])
-  @use_args(EmailSchema(many=True))
+  @use_args({
+    'emails': fields.DelimitedList(fields.Str, required=True),
+    'role': fields.Str(),
+  })
   def add_people(self, args, group_id):
     # add a new person to the group, if the current user is a mentor
     user_id = get_jwt()['uid']
