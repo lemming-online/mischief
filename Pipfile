@@ -19,6 +19,7 @@ flask-redis = "*"
 peewee = "*"
 psycopg2 = "*"
 pillow = "*"
+eventlet = "*"
 
 [dev-packages]
 pytest = "*"
