@@ -109,9 +109,7 @@ class GroupsView(BaseView):
   })
   def add_resource(self, args, group_id):
     # add a new resource to the group, if the current user is a mentor
-    user_email = get_jwt_identity()
-    current_user = User.get(User.email == user_email)
-    return model_to_dict(Resource.create(user=current_user, group_id=group_id, **args))
+    return model_to_dict(Resource.create(group_id=group_id, **args))
 
   @route('/<group_id>/feedback')
   def feedback(self, group_id):

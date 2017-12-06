@@ -23,6 +23,7 @@ jwt = JWTManager()
 cors = CORS()
 
 if environ.get('MISCHIEF_PROD'):
+    print(environ.get('DATABASE_URL'))
     db = PostgresqlExtDatabase(environ.get('DATABASE_URL'))
 else:
     db = PostgresqlExtDatabase('mischief_db', host='localhost', user='postgres', register_hstore=False)
