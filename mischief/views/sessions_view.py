@@ -72,6 +72,9 @@ class SessionsView(BaseView):
         name_faq = 'faq:' + str(group_id)
         name_user = 'users:' + str(group_id)
 
+        if fredis.exists(name_session) == False:
+            abort(500, 'Session does not exist')
+
         session_data = fredis.hgetall('session:' + str(group_id))
         announcement_data = fredis.lrange(name_announcements, 0, -1)
         faq_data = fredis.lrange(name_faq, 0, -1)
@@ -124,12 +127,21 @@ class SessionsView(BaseView):
         fredis.delete(name_queue)
         fredis.srem('sessions', group_id)
 
-        return model_to_dict(archive)
+        sessions = SessionArchive.select().join(Group).where(Group.id == group_id).order_by(SessionArchive.id.desc())
+
+        list_archived = []
+
+        for s in sessions:
+            list_archived.append(model_to_dict(s))
+
+        
+
+        return list_archived
 
     @route('/<group_id>/archived')
     def get_archived_sessions(self, group_id):
         # Get session information
-        sessions = SessionArchive.select().join(Group).where(Group.id == group_id)
+        sessions = SessionArchive.select().join(Group).where(Group.id == group_id).order_by(SessionArchive.id.desc())
 
         list_archived = []
 
