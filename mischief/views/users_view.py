@@ -118,7 +118,7 @@ class UsersView(BaseView):
   @use_args({
     'new_password': fields.String(required=True),
   })
-  def complete_reset_password(self, token, args):
+  def complete_reset_password(self, args, token):
     # resolve password reset process and update the user's password
     payload = jwt.decode(token.encode('utf8'), verify=False)
     user = User.get(User.email == payload['email'])
