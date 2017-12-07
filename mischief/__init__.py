@@ -12,9 +12,8 @@ from flask import Flask
 from flask_socketio import SocketIO
 from flask_socketio import join_room, leave_room, emit, send
 
-from mischief.util import initialize
 
-socketio = SocketIO()
+from mischief.util import initialize
 
 def create_app(config=None):
     """
