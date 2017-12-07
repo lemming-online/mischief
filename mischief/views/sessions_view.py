@@ -1,4 +1,5 @@
 import time
+import datetime
 
 from flask import abort
 from flask_classful import route
@@ -26,7 +27,12 @@ class SessionsView(BaseView):
 
     def get(self, group_id):
         # Get session information
-        session = fredis.hgetall('session:' + str(group_id))
+        name_session = 'session:' + str(group_id)
+
+        if fredis.exists(name_session) == False:
+            abort(500, 'Session does not exist')
+
+        session = fredis.hgetall(name_session)
         queue = fredis.zrangebyscore('queue:' + str(group_id), '-inf', '+inf')
         announcements = fredis.lrange('announcements:' + str(group_id), 0, -1)
         faqs = fredis.lrange('faq:' + str(group_id), 0, -1)
@@ -95,8 +101,7 @@ class SessionsView(BaseView):
 
                 count = count + 1
 
-        average_response_time = (total_time/(count-1)) if count >1 else 0
-
+        average_response_time = (total_time/(count-1)) if count > 1 else 0
 
         session_archive = {
             'group': model_to_dict(Group.get(Group.id == group_id)),
@@ -106,7 +111,8 @@ class SessionsView(BaseView):
             'questions': question_list,
             'announcements': announcement_data,
             'faqs': [tuple(faq_data[i:i+2]) for i in range(0, len(faq_data), 2)],
-            'average_response_time': average_response_time
+            'average_response_time': average_response_time,
+            'date': str(datetime.date.today())
         }
 
         archive = SessionArchive.create(data=session_archive, group_id=group_id)
@@ -119,6 +125,18 @@ class SessionsView(BaseView):
         fredis.srem('sessions', group_id)
 
         return model_to_dict(archive)
+
+    @route('/<group_id>/archived')
+    def get_archived_sessions(self, group_id):
+        # Get session information
+        sessions = SessionArchive.select().join(Group).where(Group.id == group_id)
+
+        list_archived = []
+
+        for s in sessions:
+            list_archived.append(model_to_dict(s))
+
+        return list_archived
 
     @route('/<group_id>/add', methods=['POST'])
     @use_args({'user': fields.Str(required=True), 'question': fields.Str(required=True)})
