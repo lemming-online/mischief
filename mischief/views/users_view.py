@@ -116,7 +116,7 @@ class UsersView(BaseView):
 
   @route('/reset/<string:token>', methods=['POST'])
   @use_args({
-    'new_password', fields.String(required=True),
+    'new_password': fields.String(required=True),
   })
   def complete_reset_password(self, token):
     # resolve password reset process and update the user's password
