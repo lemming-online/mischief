@@ -60,7 +60,17 @@ class SessionsView(BaseView):
         if res:
             fredis.sadd('sessions', group_id)
 
-            return fredis.hgetall('session:' + group_id)
+            session = fredis.hgetall(name_session)
+            queue = fredis.zrangebyscore('queue:' + str(group_id), '-inf', '+inf')
+            announcements = fredis.lrange('announcements:' + str(group_id), 0, -1)
+            faqs = fredis.lrange('faq:' + str(group_id), 0, -1)
+
+            return {
+                'session': session,
+                'queue': queue,
+                'announcements': announcements,
+                'faqs': [tuple(faqs[i:i+2]) for i in range(0, len(faqs), 2)]
+            }
         else:
             abort(500, 'Failed to create session')
 
