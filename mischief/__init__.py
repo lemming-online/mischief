@@ -9,11 +9,8 @@ help room management and ticketing platform
 """
 import os
 from flask import Flask
-from flask_socketio import SocketIO
 
 from mischief.util import initialize
-
-socketio = SocketIO()
 
 def create_app(config=None):
     """
@@ -31,18 +28,5 @@ def create_app(config=None):
     _app.config['UPLOAD_FOLDER'] = os.path.dirname(os.path.realpath(__file__)) + '/static/'
 
     initialize(_app)
-    socketio.init_app(_app)
-
-    @socketio.on('join')
-    def on_join(data):
-        room = data['group_id']
-        join_room(room)
-        send('Successfully joined room: ' + room)
-
-    @socketio.on('leave')
-    def on_leave(data):
-        room = data['group_id']
-        leave_room(room)
-        send('Successfully left room: ' + room)
 
     return _app

@@ -109,16 +109,16 @@ class UsersView(BaseView):
     # prompt the password reset process and send an email
     user = User.get(User.email == args['email'])
     token = jwt.encode({'email': user.email}, user.encrypted_password)
-    url = 'https://lemming.online/reset_password?token={}'.format(str(token))
+    url = 'https://lemming.online/resetpassword/{}'.format(token.decode('utf8'))
     html = '<a href="{}">Click here!</a>'.format(url)
     res = mail.send(to=user.email, content=html, subject='Reset your Lemming password')
     return {'success': res.status_code == 200}, res.status_code
 
   @route('/reset/<string:token>', methods=['POST'])
   @use_args({
-    'new_password', fields.String(required=True),
+    'new_password': fields.String(required=True),
   })
-  def complete_reset_password(self, token):
+  def complete_reset_password(self, args, token):
     # resolve password reset process and update the user's password
     payload = jwt.decode(token.encode('utf8'), verify=False)
     user = User.get(User.email == payload['email'])

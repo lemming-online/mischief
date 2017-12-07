@@ -9,12 +9,11 @@ from webargs.flaskparser import use_args
 from playhouse.shortcuts import model_to_dict
 from flask_socketio import join_room, leave_room, emit, send
 
-from mischief import socketio
 from mischief.models.user import User
 from mischief.models.group import Group
 from mischief.models.session_archive import SessionArchive
 from mischief.views.base_view import BaseView
-from mischief.util import fredis
+from mischief.util import fredis, socketio
 
 class SessionsView(BaseView):
     # Group Handling
