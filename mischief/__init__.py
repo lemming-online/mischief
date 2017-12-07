@@ -10,6 +10,7 @@ help room management and ticketing platform
 import os
 from flask import Flask
 from flask_socketio import SocketIO
+from flask_socketio import join_room, leave_room, emit, send
 
 from mischief.util import initialize
 
@@ -37,12 +38,12 @@ def create_app(config=None):
     def on_join(data):
         room = data['group_id']
         join_room(room)
-        send('Successfully joined room: ' + room)
+        emit('join', 'Successfully joined room: ' + str(room))
 
     @socketio.on('leave')
     def on_leave(data):
         room = data['group_id']
         leave_room(room)
-        send('Successfully left room: ' + room)
+        emit('leave', 'Successfully left room: ' + str(room))
 
     return _app
