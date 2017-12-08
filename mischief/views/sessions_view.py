@@ -220,6 +220,10 @@ class SessionsView(BaseView):
         name_user = 'users:' + str(group_id)
 
         user = fredis.zrange(name_queue, 0, 0)
+
+        if (len(user) == 0):
+            abort(500, 'No users in queue')
+
         question_num = fredis.hget(name_user, user[0])
         name_question = 'question:' + str(group_id) + ':' + str(question_num)
 
@@ -231,7 +235,7 @@ class SessionsView(BaseView):
 
             start_time = int(fredis.hget(name_question, 'helped_time'))
             elapsed_time = int(round(time.time())) - start_time
-            fredis.hmset(name_question, {'helped_time': elapsed_time })
+            fredis.hmset(name_question, {'helped_time': elapsed_time})
 
             socketio.emit('queue', {'queue': fredis.zrangebyscore(name_queue, '-inf', '+inf')}, room=str(group_id))
 
@@ -347,6 +351,8 @@ class SessionsView(BaseView):
         res = fredis.lpush(name_faq, args['answer'], args['question'])
 
         if res:
+            socketio.emit('faqs', {'faqs': fredis.lrange(name_faq, 0, -1)}, room=str(group_id))
+
             return {'success': True}
         else:
             abort(500, 'FAQ failed to post')
@@ -359,6 +365,8 @@ class SessionsView(BaseView):
         res = fredis.delete(name_faq)
 
         if res:
+            socketio.emit('faqs', {'faqs': []})
+
             return {'success': True}
         else:
             abort(500, 'Failed to delete faq')
