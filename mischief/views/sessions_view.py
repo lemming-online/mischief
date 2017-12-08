@@ -182,7 +182,7 @@ class SessionsView(BaseView):
         return list_archived
 
     @route('/<group_id>/add', methods=['POST'])
-    @use_args({'user': fields.Str(required=True), 'question': fields.Str(required=True)})
+    @use_args({'user': fields.Str(required=True), 'question': fields.Str(required=True), 'fName': fields.Str(required=True), 'lName': fields.Str(required=True)})
     def add_queue(self, args, group_id):
         # Add user to queue
         name_queue = 'queue:' + str(group_id)
@@ -198,7 +198,7 @@ class SessionsView(BaseView):
             question_num = fredis.hincrby(name_session, 'num_tickets', 1)
             name_question = 'question:' + str(group_id) + ':' + str(question_num)
             fredis.hmset(name_question, {'id': question_num, 'user': args['user'], 'question': args['question'], 
-                'public': False, 'helped': False, 'helped_time': int(round(time.time()))})
+                'public': False, 'helped': False, 'helped_time': int(round(time.time())), 'fName': args['fName'], 'lName': args['lName']})
 
             fredis.hmset(name_user, {args['user']: question_num})
 
