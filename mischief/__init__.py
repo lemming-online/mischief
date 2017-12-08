@@ -31,18 +31,5 @@ def create_app(config=None):
     _app.config['UPLOAD_FOLDER'] = os.path.dirname(os.path.realpath(__file__)) + '/static/'
 
     initialize(_app)
-    socketio.init_app(_app)
-
-    @socketio.on('join')
-    def on_join(data):
-        room = data['group_id']
-        join_room(room)
-        emit('join', 'Successfully joined room: ' + str(room))
-
-    @socketio.on('leave')
-    def on_leave(data):
-        room = data['group_id']
-        leave_room(room)
-        emit('leave', 'Successfully left room: ' + str(room))
 
     return _app
