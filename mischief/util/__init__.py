@@ -47,10 +47,6 @@ def initialize(app):
     fredis.init_app(app)
     socketio.init_app(app)
 
-    @socketio.on('connect')
-    def on_connect():
-        emit('test_response', {'data': 'Connected finally'})
-
     @socketio.on('join')
     def on_join(data):
         room = data['group_id']
