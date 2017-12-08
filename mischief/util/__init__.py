@@ -12,7 +12,7 @@ from flask import Response, jsonify, current_app
 from flask_cors import CORS
 from flask_jwt_simple import JWTManager
 from flask_redis import FlaskRedis
-from flask_socketio import SocketIO, send, join_room, leave_room
+from flask_socketio import SocketIO, send, emit, join_room, leave_room
 from playhouse.postgres_ext import PostgresqlExtDatabase
 from werkzeug.routing import IntegerConverter
 from os import environ
@@ -47,17 +47,21 @@ def initialize(app):
     fredis.init_app(app)
     socketio.init_app(app)
 
+    @socketio.on('connect')
+    def on_connect():
+        emit('test_response', {'data': 'Connected finally'})
+
     @socketio.on('join')
     def on_join(data):
         room = data['group_id']
         join_room(room)
-        send('Successfully joined room: ' + room)
+        emit('join', {'data': 'Successfully joined room: ' + str(room)})
 
     @socketio.on('leave')
     def on_leave(data):
         room = data['group_id']
         leave_room(room)
-        send('Successfully left room: ' + room)
+        emit('leave', 'Successfully left room: ' + str(room))
 
     from mischief.models.user import User
     from mischief.models.group import Group
