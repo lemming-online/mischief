@@ -57,7 +57,7 @@ def initialize(app):
     def on_leave(data):
         room = data['group_id']
         leave_room(room)
-        emit('leave', 'Successfully left room: ' + str(room))
+        emit('leave', {'data': 'Successfully left room: ' + str(room)})
 
     from mischief.models.user import User
     from mischief.models.group import Group
