@@ -36,11 +36,33 @@ class SessionsView(BaseView):
         announcements = fredis.lrange('announcements:' + str(group_id), 0, -1)
         faqs = fredis.lrange('faq:' + str(group_id), 0, -1)
 
+        question_list = []
+        count = 1
+
+        while(count <= int(session['num_tickets'])):
+            name_question = 'question:' + str(group_id) + ':' + str(count)
+            question_data = fredis.hgetall(name_question)
+
+            if question_data != None:
+                question = {
+                    'user': model_to_dict(User.get(User.id == question_data['user']), exclude=[User.encrypted_password]),
+                    'question': question_data['question'],
+                    'helped': question_data['helped'],
+                    'helped_time': question_data['helped_time'],
+                    'public': question_data['public']
+                }
+
+                question_list.append(question)
+                fredis.delete(name_question)
+
+                count = count + 1
+
         return {
             'session': session,
             'queue': queue,
             'announcements': announcements,
-            'faqs': [tuple(faqs[i:i+2]) for i in range(0, len(faqs), 2)]
+            'faqs': [tuple(faqs[i:i+2]) for i in range(0, len(faqs), 2)],
+            'questions': question_list
         }
 
     @use_args({'group_id': fields.Str(), 'title': fields.Str()})
@@ -68,7 +90,8 @@ class SessionsView(BaseView):
                 'session': session,
                 'queue': queue,
                 'announcements': announcements,
-                'faqs': [tuple(faqs[i:i+2]) for i in range(0, len(faqs), 2)]
+                'faqs': [tuple(faqs[i:i+2]) for i in range(0, len(faqs), 2)],
+                'questions': []
             }
         else:
             abort(500, 'Failed to create session')
@@ -102,7 +125,8 @@ class SessionsView(BaseView):
                     'user': model_to_dict(User.get(User.id == question_data['user']), exclude=[User.encrypted_password]),
                     'question': question_data['question'],
                     'helped': question_data['helped'],
-                    'helped_time': question_data['helped_time']
+                    'helped_time': question_data['helped_time'],
+                    'public': question_data['public']
                 }
 
                 question_list.append(question_archive)
@@ -143,8 +167,6 @@ class SessionsView(BaseView):
         for s in sessions:
             list_archived.append(model_to_dict(s))
 
-        
-
         return list_archived
 
     @route('/<group_id>/archived')
@@ -175,7 +197,8 @@ class SessionsView(BaseView):
         if res:
             question_num = fredis.hincrby(name_session, 'num_tickets', 1)
             name_question = 'question:' + str(group_id) + ':' + str(question_num)
-            fredis.hmset(name_question, {'user': args['user'], 'question': args['question'], 'helped': False, 'helped_time': int(round(time.time()))})
+            fredis.hmset(name_question, {'id': question_num, 'user': args['user'], 'question': args['question'], 
+                'public': False, 'helped': False, 'helped_time': int(round(time.time()))})
 
             fredis.hmset(name_user, {args['user']: question_num})
 
@@ -183,7 +206,9 @@ class SessionsView(BaseView):
 
             socketio.emit('queue', {'queue': fredis.zrangebyscore(name_queue, '-inf', '+inf')}, room=str(group_id))
 
-            return {'position': position + 1}
+            question_data = fredis.hgetall(name_question)
+
+            return {'position': position + 1, 'question': question_data}
         else:
             abort(500, 'Failed to add to queue')
 
@@ -258,6 +283,15 @@ class SessionsView(BaseView):
             return {'success': True}
         else:
             abort(500, 'Failed to remove from queue')
+
+    @route('/<group_id>/question/<question_id>/public', methods=['PATCH'])
+    def make_question_public(self, group_id, question_id):
+        name_question = 'question:' + str(group_id) + ':' + str(question_id)
+        
+        fredis.hmset(name_question, {'public': True})
+        question_data = fredis.hgetall(name_question)
+
+        return {'question': question_data}
 
     @route('/<group_id>/announcements')
     def get_announcements(self, group_id):
