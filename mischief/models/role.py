@@ -8,6 +8,7 @@ class Role(Base):
   user = ForeignKeyField(User)
   group = ForeignKeyField(Group)
   title = CharField()
+  location_classroom = CharField()
 
   class Meta:
     indexes = (

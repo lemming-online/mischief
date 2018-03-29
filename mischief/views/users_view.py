@@ -73,7 +73,7 @@ class UsersView(BaseView):
     user = User.get(User.email == args['email'])
     token = jwt.encode({'email': user.email}, user.encrypted_password)
     url = url_for('UsersView:complete_activation', token=str(token, 'utf8'), _external=True)
-    html = '<a href="{}">Click here!</a>'.format(url)
+    html = '<a href="{}">Click here!</a>'.format('http://localhost:3000/signup?token=' + str(token, 'utf8'))
     res = mail.send(to=user.email, content=html, subject='Activate your Lemming account')
     return {'success': res.status_code == 200}, res.status_code
 
@@ -86,7 +86,7 @@ class UsersView(BaseView):
       abort(401, 'Failed to validate token')
     user.is_enabled = True
     user.save()
-    return redirect('https://lemming.online/login?activated=true')
+    return {'success': True}
 
   @route('/login', methods=['POST'])
   @use_args({

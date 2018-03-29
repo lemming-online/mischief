@@ -4,7 +4,7 @@ from mischief.models.base import Base
 from mischief.models.group import Group
 
 class Resource(Base):
-  url = CharField(unique=True)
+  url = CharField()
   title = CharField()
   description = CharField()
   group = ForeignKeyField(Group)

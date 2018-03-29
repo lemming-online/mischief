@@ -5,6 +5,7 @@ from marshmallow import validate, Schema
 from playhouse.shortcuts import model_to_dict
 from webargs import fields
 from webargs.flaskparser import use_args
+from urllib.parse import urlparse
 
 from mischief.models.feedback import Feedback
 from mischief.models.group import Group
@@ -26,14 +27,14 @@ class GroupsView(BaseView):
     'name': fields.Str(required=True),
     'location': fields.Str(required=True),
     'description': fields.Str(required=True),
-    'website': fields.Str(required=True),
+    'website': fields.Str(required=True)
   })
   def post(self, args):
     # create a new group with the current user as the mentor
     user_email = get_jwt_identity()
     current_user = User.get(User.email == user_email)
     group = Group.create(**args)
-    Role.create(user=current_user, group=group, title='mentor')
+    Role.create(user=current_user, group=group, title='mentor', location_classroom="Location")
     return model_to_dict(group)
 
   @use_args({
@@ -89,9 +90,23 @@ class GroupsView(BaseView):
         .count() == 0
     ):
       abort(401, 'Not a mentor')
+
     for email in args['emails']:
-      user = User.get(User.email == email)
-      Role.create(group_id=group_id, user=user, title=args['role'])
+      try:
+        user = User.get(User.email == email)
+        print(user.id)
+        if (
+          Role
+            .select()
+            .where(Role.user_id == user.id,
+              Role.group_id == group_id)
+            .count() == 0
+        ):
+          Role.create(group_id=group_id, user=user, title=args['role'], location_classroom="Location")
+        else:
+          abort(500, 'Duplicate user')
+      except:
+        abort(500, 'Invalid user')
     return model_to_dict(Group.get(Group.id == group_id))
 
   @route('/<group_id>/resources')
@@ -109,6 +124,8 @@ class GroupsView(BaseView):
   })
   def add_resource(self, args, group_id):
     # add a new resource to the group, if the current user is a mentor
+    args['url'] = urlparse(args['url'], scheme='https').geturl()
+    
     return model_to_dict(Resource.create(group_id=group_id, **args))
 
   @route('/<group_id>/feedback')
