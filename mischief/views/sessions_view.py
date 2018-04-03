@@ -52,20 +52,15 @@ class SessionsView(BaseView):
                     'question': question_data['question'],
                     'helped': question_data['helped'],
                     'helped_time': question_data['helped_time'],
-                    'public': question_data['public']
+                    'public': question_data['public'],
+                    'canceled': question_data['canceled']
                 }
 
                 count = count - 1
 
-                userInQueue = fredis.zrank(name_queue, question_data['user'])
-
-                if userInQueue != None:
-                    try:
-                        users.index(question_data['user'])                            
-                    except:
-                        users.append(question_data['user'])
-                        queue.append({ 'position': count - canceledUsers, 'question': question_data, 'group': str(group_id)  })
-                        question_list.append(question)
+                if (question_data['canceled'] == 'False' and question_data['helped'] == 'False'):
+                    queue.append({ 'position': count - canceledUsers, 'question': question_data, 'group': str(group_id)  })
+                    question_list.append(question)
                 else:
                     canceledUsers = canceledUsers + 1
             else:
@@ -79,7 +74,7 @@ class SessionsView(BaseView):
             'announcements': announcements,
             'faqs': [tuple(faqs[i:i+2]) for i in range(0, len(faqs), 2)],
             'questions': question_list,
-            'uid': user_id
+            'uid': str(user_id)
         }
 
     @use_args({'group_id': fields.Str(), 'title': fields.Str()})
@@ -151,12 +146,13 @@ class SessionsView(BaseView):
                 question_list.append(question_archive)
                 fredis.delete(name_question)
 
-                if bool(question_archive['helped']) == True:
-                    total_time = total_time + int(question_archive['helped_time'])
+                if bool(question_data['helped']) == True and question_data['canceled'] == 'False':
+                    print(question_data['helped_time'])
+                    total_time = total_time + int(question_data['helped_time'])
 
                 count = count + 1
 
-        average_response_time = (total_time/(count-1)) if count > 1 else 0
+        average_response_time = (total_time/(int(session_data['helped_tickets']))) if int(session_data['helped_tickets']) > 0 else 0
 
         session_archive = {
             'group': model_to_dict(Group.get(Group.id == group_id)),
@@ -217,7 +213,7 @@ class SessionsView(BaseView):
             question_num = fredis.hincrby(name_session, 'num_tickets', 1)
             name_question = 'question:' + str(group_id) + ':' + str(question_num)
             fredis.hmset(name_question, {'id': question_num, 'user': args['user'], 'question': args['question'], 
-                'public': False, 'helped': False, 'helped_time': int(round(time.time())), 'fName': args['fName'], 'lName': args['lName']})
+                'public': False, 'helped': False, 'helped_time': int(round(time.time())), 'fName': args['fName'], 'lName': args['lName'], 'canceled': False})
 
             fredis.hmset(name_user, {args['user']: question_num})
 
@@ -242,19 +238,14 @@ class SessionsView(BaseView):
                         'question': question_data['question'],
                         'helped': question_data['helped'],
                         'helped_time': question_data['helped_time'],
-                        'public': question_data['public']
+                        'public': question_data['public'],
+                        'canceled': question_data['canceled']
                     }
 
                     count = count - 1
 
-                    userInQueue = fredis.zrank(name_queue, question_data['user'])
-
-                    if userInQueue != None:
-                        try:
-                            users.index(question_data['user'])                            
-                        except:
-                            users.append(question_data['user'])
-                            newQueue.append({ 'position': count - canceledUsers, 'question': question_data, 'group': str(group_id)  })
+                    if (question_data['canceled'] == 'False' and question_data['helped'] == 'False'):
+                        newQueue.append({ 'position': count - canceledUsers, 'question': question_data, 'group': str(group_id)  })
                     else:
                         canceledUsers = canceledUsers + 1
                 else:
@@ -339,7 +330,8 @@ class SessionsView(BaseView):
 
                     count = count + 1
 
-                    newQueue.append({ 'position': count, 'question': question_data, 'group': str(group_id)  })
+                    if (question_data['helped'] == 'False' and question_data['canceled'] == 'False'):
+                        newQueue.append({ 'position': count, 'question': question_data, 'group': str(group_id)  })
 
             socketio.emit('queue', {'queue': newQueue}, room=str(group_id))
 
@@ -365,8 +357,6 @@ class SessionsView(BaseView):
 
             session = fredis.hgetall(name_session)
 
-            userInQueue = fredis.zrank(name_queue, user_id)
-
             canceledUsers = 0
 
             while(count <= int(session['num_tickets'])):
@@ -374,19 +364,26 @@ class SessionsView(BaseView):
                 question_data = fredis.hgetall(name_question)
 
                 if question_data != None:
+                    canceled = False
+
                     question = {
                         'user': model_to_dict(User.get(User.id == question_data['user']), exclude=[User.encrypted_password]),
                         'question': question_data['question'],
                         'helped': question_data['helped'],
                         'helped_time': question_data['helped_time'],
-                        'public': question_data['public']
+                        'public': question_data['public'],
+                        'canceled': question_data['canceled']
                     }
+
+                    if (question_data['user'] == str(user_id) and question_data['canceled'] == 'False'):
+                        fredis.hmset(name_question, {'canceled': True})
+                        canceled = True
+
+                    question_data = fredis.hgetall(name_question)
 
                     count = count + 1
 
-                    userInQueue = fredis.zrank(name_queue, question_data['user'])
-
-                    if userInQueue != None:
+                    if (question_data['canceled'] == 'False' and question_data['helped'] == 'False'):
                         newQueue.append({ 'position': count - canceledUsers, 'question': question_data, 'group': str(group_id)  })
                     else:
                         canceledUsers = canceledUsers + 1

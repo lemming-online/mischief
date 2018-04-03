@@ -82,6 +82,8 @@ def initialize(app):
     @jwt.jwt_data_loader
     def token_defaults(identity):
         user = User.get(User.id == identity)
+
+        print(current_app.config['JWT_EXPIRES'])
         return {
             'iss': 'lemming:auth',
             'exp': datetime.utcnow() + current_app.config['JWT_EXPIRES'],
