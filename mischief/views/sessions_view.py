@@ -27,19 +27,22 @@ class SessionsView(BaseView):
     def get(self, group_id):
         # Get session information
         name_session = 'session:' + str(group_id)
+        name_queue = 'queue:' + str(group_id)
 
         if fredis.exists(name_session) == False:
-            abort(500, 'Session does not exist')
+            return {}
 
         session = fredis.hgetall(name_session)
-        queue = fredis.zrangebyscore('queue:' + str(group_id), '-inf', '+inf')
+        queue = []
         announcements = fredis.lrange('announcements:' + str(group_id), 0, -1)
         faqs = fredis.lrange('faq:' + str(group_id), 0, -1)
 
+        count = int(session['num_tickets'])
+        canceledUsers = 0
+        users = []
         question_list = []
-        count = 1
 
-        while(count <= int(session['num_tickets'])):
+        while(count > 0):
             name_question = 'question:' + str(group_id) + ':' + str(count)
             question_data = fredis.hgetall(name_question)
 
@@ -52,22 +55,38 @@ class SessionsView(BaseView):
                     'public': question_data['public']
                 }
 
-                question_list.append(question)
-                fredis.delete(name_question)
+                count = count - 1
 
-                count = count + 1
+                userInQueue = fredis.zrank(name_queue, question_data['user'])
+
+                if userInQueue != None:
+                    try:
+                        users.index(question_data['user'])                            
+                    except:
+                        users.append(question_data['user'])
+                        queue.append({ 'position': count - canceledUsers, 'question': question_data, 'group': str(group_id)  })
+                        question_list.append(question)
+                else:
+                    canceledUsers = canceledUsers + 1
+            else:
+                break                     
+
+        user_id = get_jwt()['uid']
 
         return {
             'session': session,
             'queue': queue,
             'announcements': announcements,
             'faqs': [tuple(faqs[i:i+2]) for i in range(0, len(faqs), 2)],
-            'questions': question_list
+            'questions': question_list,
+            'uid': user_id
         }
 
     @use_args({'group_id': fields.Str(), 'title': fields.Str()})
     def post(self, args):
         # Create new session
+        fredis.flushall()
+
         group_id = args['group_id']
         title = args['title']
         name_session = 'session:' + str(group_id)
@@ -204,11 +223,48 @@ class SessionsView(BaseView):
 
             position = fredis.zrank(name_queue, args['user'])
 
-            socketio.emit('queue', {'queue': fredis.zrangebyscore(name_queue, '-inf', '+inf')}, room=str(group_id))
+            session = fredis.hgetall(name_session)
+
+            newQueue = []
+            count = int(session['num_tickets'])
+
+            session = fredis.hgetall(name_session)
+            canceledUsers = 0
+            users = []
+
+            while(count > 0):
+                name_question = 'question:' + str(group_id) + ':' + str(count)
+                question_data = fredis.hgetall(name_question)
+
+                if question_data != None:
+                    question = {
+                        'user': model_to_dict(User.get(User.id == question_data['user']), exclude=[User.encrypted_password]),
+                        'question': question_data['question'],
+                        'helped': question_data['helped'],
+                        'helped_time': question_data['helped_time'],
+                        'public': question_data['public']
+                    }
+
+                    count = count - 1
+
+                    userInQueue = fredis.zrank(name_queue, question_data['user'])
+
+                    if userInQueue != None:
+                        try:
+                            users.index(question_data['user'])                            
+                        except:
+                            users.append(question_data['user'])
+                            newQueue.append({ 'position': count - canceledUsers, 'question': question_data, 'group': str(group_id)  })
+                    else:
+                        canceledUsers = canceledUsers + 1
+                else:
+                    break                
+
+            socketio.emit('queue', {'queue': newQueue}, room=str(group_id))
 
             question_data = fredis.hgetall(name_question)
 
-            return {'position': position + 1, 'question': question_data}
+            return {'position': position + 1, 'question': question_data, 'group': str(group_id) }
         else:
             abort(500, 'Failed to add to queue')
 
@@ -263,7 +319,29 @@ class SessionsView(BaseView):
             elapsed_time = int(round(time.time())) - start_time
             fredis.hmset(name_question, {'helped_time': elapsed_time })
 
-            socketio.emit('queue', {'queue': fredis.zrangebyscore(name_queue, '-inf', '+inf')}, room=str(group_id))
+            newQueue = []
+            count = 1
+
+            session = fredis.hgetall(name_session)
+
+            while(count <= int(session['num_tickets'])):
+                name_question = 'question:' + str(group_id) + ':' + str(count)
+                question_data = fredis.hgetall(name_question)
+
+                if question_data != None:
+                    question = {
+                        'user': model_to_dict(User.get(User.id == question_data['user']), exclude=[User.encrypted_password]),
+                        'question': question_data['question'],
+                        'helped': question_data['helped'],
+                        'helped_time': question_data['helped_time'],
+                        'public': question_data['public']
+                    }
+
+                    count = count + 1
+
+                    newQueue.append({ 'position': count, 'question': question_data, 'group': str(group_id)  })
+
+            socketio.emit('queue', {'queue': newQueue}, room=str(group_id))
 
             return {'success': True}
         else:
@@ -282,7 +360,40 @@ class SessionsView(BaseView):
         res = fredis.zrem(name_queue, str(user_id))
 
         if res:
-            socketio.emit('queue', {'queue': fredis.zrangebyscore(name_queue, '-inf', '+inf')}, room=str(group_id))
+            newQueue = []
+            count = 1
+
+            session = fredis.hgetall(name_session)
+
+            userInQueue = fredis.zrank(name_queue, user_id)
+
+            canceledUsers = 0
+
+            while(count <= int(session['num_tickets'])):
+                name_question = 'question:' + str(group_id) + ':' + str(count)
+                question_data = fredis.hgetall(name_question)
+
+                if question_data != None:
+                    question = {
+                        'user': model_to_dict(User.get(User.id == question_data['user']), exclude=[User.encrypted_password]),
+                        'question': question_data['question'],
+                        'helped': question_data['helped'],
+                        'helped_time': question_data['helped_time'],
+                        'public': question_data['public']
+                    }
+
+                    count = count + 1
+
+                    userInQueue = fredis.zrank(name_queue, question_data['user'])
+
+                    if userInQueue != None:
+                        newQueue.append({ 'position': count - canceledUsers, 'question': question_data, 'group': str(group_id)  })
+                    else:
+                        canceledUsers = canceledUsers + 1
+                else:
+                    break                
+
+            socketio.emit('queue', {'queue': newQueue}, room=str(group_id))
 
             return {'success': True}
         else:
